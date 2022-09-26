@@ -1,0 +1,25 @@
+[submodule "dependencies/chisel3.git"]
+	path = dependencies/chisel3
+	url = git@github.com:chipsalliance/chisel3.git
+[submodule "dependencies/chiseltest.git"]
+	path = dependencies/chiseltest
+	url = git@github.com:ucb-bar/chiseltest.git
+[submodule "dependencies/firrtl.git"]
+	path = dependencies/firrtl
+	url = git@github.com:chipsalliance/firrtl.git
+[submodule "dependencies/treadle.git"]
+	path = dependencies/treadle
+	url = git@github.com:chipsalliance/treadle.git
+[submodule "dependencies/rocket-chip"]
+	path = dependencies/rocket-chip
+	url = git@github.com:chipsalliance/rocket-chip.git
+	branch = dev
+[submodule "dependencies/cde"]
+	path = dependencies/cde
+	url = git@github.com:chipsalliance/cde.git
+[submodule "dependencies/berkeley-hardfloat"]
+	path = dependencies/berkeley-hardfloat
+	url = git@github.com:ucb-bar/berkeley-hardfloat.git
+[submodule "dependencies/tilelink"]
+	path = dependencies/tilelink
+	url = git@github.com:chipsalliance/tilelink.git
