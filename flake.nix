@@ -1,5 +1,5 @@
 {
-  description = "rocket-chip";
+  description = "vector";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -15,34 +15,22 @@
       let
         pkgs = import nixpkgs { inherit system; overlays = [ overlay ]; };
         deps = with pkgs; [
-          git
-          gnumake autoconf automake
-          mill
-          dtc
-          verilator cmake ninja
-          python3 python3Packages.bootstrapped-pip
-          pkgsCross.riscv64-embedded.buildPackages.gcc
-          circt
+          rv64-clang
+          myLLVM.bintools
 
-          spike riscvTests
+          cmake
+          libargs glog fmt libspike zlib
+
+          mill python3
+          gnused coreutils gnumake gnugrep which
+          parallel protobuf ninja verilator antlr4 numactl dtc
+          espresso
+          circt
         ];
       in
         {
-          legacyPackages = pkgs;
-          devShell = pkgs.mkShell.override { stdenv = pkgs.clangStdenv; } {
+          devShell = pkgs.mkShell.override { stdenv = pkgs.myLLVM.stdenv; } {
             buildInputs = deps;
-            SPIKE_ROOT = "${pkgs.spike}";
-            RISCV_TESTS_ROOT = "${pkgs.riscvTests}";
-            RV64_TOOLCHAIN_ROOT = "${pkgs.pkgsCross.riscv64-embedded.buildPackages.gcc}";
-            shellHook = ''
-              # Tells pip to put packages into $PIP_PREFIX instead of the usual locations.
-              # See https://pip.pypa.io/en/stable/user_guide/#environment-variables.
-              export PIP_PREFIX=$(pwd)/venv/pip_packages
-              export PYTHONPATH="$PIP_PREFIX/${pkgs.python3.sitePackages}:$PYTHONPATH"
-              export PATH="$PIP_PREFIX/bin:$PATH"
-              unset SOURCE_DATE_EPOCH
-              pip3 install importlib-metadata typing-extensions riscof==1.25.2
-            '';
           };
         }
       )
