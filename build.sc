@@ -15,6 +15,8 @@ import $file.common
 
 object v {
   val scala = "2.13.10"
+  val mainargs = ivy"com.lihaoyi::mainargs:0.3.0"
+  val osLib = ivy"com.lihaoyi::os-lib:latest.integration"
 }
 
 object myfirrtl extends dependencies.firrtl.build.firrtlCrossModule(v.scala) {
@@ -75,4 +77,48 @@ object diplomatic extends common.DiplomaticModule { m =>
   def rocketModule = rocket
   def rocketchipModule = myrocketchip
   override def scalacOptions = T(Seq(s"-Xplugin:${mychisel3.plugin.jar().path}"))
+}
+
+object cosim extends Module {
+  object elaborate extends ScalaModule with ScalafmtModule {
+    def scalaVersion = T {
+      v.scala
+    }
+
+    override def moduleDeps = Seq(mycde, myrocketchip)
+
+    override def scalacOptions = T {
+      Seq(s"-Xplugin:${mychisel3.plugin.jar().path}")
+    }
+
+    override def ivyDeps = Agg(
+      v.mainargs,
+      v.osLib
+    )
+
+    def elaborate = T.persistent {
+      mill.modules.Jvm.runSubprocess(
+        finalMainClass(),
+        runClasspath().map(_.path),
+        forkArgs(),
+        forkEnv(),
+        Seq(
+          "--dir", T.dest.toString,
+        ),
+        workingDir = forkWorkingDir()
+      )
+      PathRef(T.dest)
+    }
+
+    def rtls = T.persistent {
+      os.read(elaborate().path / "filelist.f").split("\n").map(str =>
+        try {
+          os.Path(str)
+        } catch {
+          case e: IllegalArgumentException if e.getMessage.contains("is not an absolute path") =>
+            elaborate().path / str
+        }
+      ).filter(p => p.ext == "v" || p.ext == "sv").map(PathRef(_)).toSeq
+    }
+  }
 }
