@@ -13,6 +13,9 @@ import $file.dependencies.chiseltest.build
 import $file.dependencies.tilelink.common
 import $file.common
 
+import mill.modules.Util
+import mill.define.{Sources, TaskModule}
+
 object v {
   val scala = "2.13.10"
   val mainargs = ivy"com.lihaoyi::mainargs:0.3.0"
@@ -327,4 +330,322 @@ object cosim extends Module {
       PathRef(elf)
     }
   }
+}
+
+object cases extends Module {
+  trait Case extends Module {
+    def name: T[String] = millSourcePath.last
+    def sources = T.sources { millSourcePath }
+    def allSourceFiles = T { Lib.findSourceFiles(sources(), Seq("S", "s", "c", "cpp")).map(PathRef(_)) }
+    def linkScript: T[PathRef] = T {
+      os.write(T.ctx.dest / "linker.ld", s"""
+                                            |SECTIONS
+                                            |{
+                                            |  . = 0x1000;
+                                            |  .text.start : { *(.text.start) }
+                                            |}
+                                            |""".stripMargin)
+      PathRef(T.ctx.dest / "linker.ld")
+    }
+    def compile: T[PathRef] = T {
+      os.proc(Seq("clang-rv64", "-o", name() + ".elf" ,"--target=riscv64", "-march=rv64gc", "-mno-relax", s"-T${linkScript().path}") ++ allSourceFiles().map(_.path.toString)).call(T.ctx.dest)
+      os.proc(Seq("llvm-objcopy", "-O", "binary", "--only-section=.text", name() + ".elf", name())).call(T.ctx.dest)
+      T.log.info(s"${name()} is generated in ${T.dest},\n")
+      PathRef(T.ctx.dest / name())
+    }
+  }
+  object smoketest extends Case{
+    override def linkScript: T[PathRef] = T {
+      os.write(T.ctx.dest / "linker.ld",
+        s"""
+           |SECTIONS
+           |{
+           |  . = 0x80000000;
+           |  .text.start : { *(.text.start) }
+           |}
+           |""".stripMargin)
+      PathRef(T.ctx.dest / "linker.ld")
+    }
+  }
+  object entrance extends Case
+  object riscvtests extends Module {
+
+    c =>
+    trait Suite extends Module {
+      def name: T[String]
+
+      def description: T[String]
+
+      def binaries: T[Seq[PathRef]]
+    }
+
+    object test extends Module {
+      trait Suite extends c.Suite {
+        def name = T {
+          millSourcePath.last
+        }
+
+        def description = T {
+          s"test suite ${name} from riscv-tests"
+        }
+
+        def target = T.persistent {
+          os.walk(untar().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
+        }
+
+        def init = T.persistent {
+          target().map(bin => {
+            os.proc("cp", bin.path, "./" + bin.path.last + ".elf").call(T.dest)
+            os.proc("llvm-objcopy", "-O", "binary", bin.path.last + ".elf", bin.path.last).call(T.dest)
+          })
+          PathRef(T.dest)
+        }
+
+        def test = T {
+          println("why")
+
+          target.map(a =>
+            println("hello"))
+          PathRef(T.dest)
+        }
+
+        def binaries = T {
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))
+        }
+      }
+
+      def commit = T.input {
+        "047314c5b0525b86f7d5bb6ffe608f7a8b33ffdb"
+      }
+
+      def tgz = T.persistent {
+        Util.download(s"https://github.com/ZenithalHourlyRate/riscv-tests-release/releases/download/tag-${commit()}/riscv-tests.tgz")
+      }
+
+      def untar = T.persistent {
+        mill.modules.Jvm.runSubprocess(Seq("tar", "xzf", tgz().path).map(_.toString), Map[String, String](), T.dest)
+        PathRef(T.dest)
+      }
+
+      object `rv32mi-p` extends Suite
+
+      object `rv32mi-p-lh` extends Suite
+
+      object `rv32mi-p-lw` extends Suite
+
+      object `rv32mi-p-sh` extends Suite
+
+      object `rv32mi-p-sw` extends Suite
+
+      object `rv32si-p` extends Suite
+
+      object `rv32ua-p` extends Suite
+
+      object `rv32ua-v` extends Suite
+
+      object `rv32uc-p` extends Suite
+
+      object `rv32uc-v` extends Suite
+
+      object `rv32ud-p` extends Suite
+
+      object `rv32ud-v` extends Suite
+
+      object `rv32uf-p` extends Suite
+
+      object `rv32uf-v` extends Suite
+
+      object `rv32ui-p` extends Suite
+
+      object `rv32ui-v` extends Suite
+
+      object `rv32um-p` extends Suite
+
+      object `rv32um-v` extends Suite
+
+      object `rv32uzfh-p` extends Suite
+
+      object `rv32uzfh-v` extends Suite
+
+      object `rv64mi-p` extends Suite
+
+      object `rv64mi-p-ld` extends Suite
+
+      object `rv64mi-p-lh` extends Suite
+
+      object `rv64mi-p-lw` extends Suite
+
+      object `rv64mi-p-sd` extends Suite
+
+      object `rv64mi-p-sh` extends Suite
+
+      object `rv64mi-p-sw` extends Suite
+
+      object `rv64mzicbo-p` extends Suite
+
+      object `rv64si-p` extends Suite
+
+      object `rv64si-p-icache` extends Suite
+
+      object `rv64ssvnapot-p` extends Suite
+
+      object `rv64ua-p` extends Suite
+
+      object `rv64ua-v` extends Suite
+
+      object `rv64uc-p` extends Suite
+
+      object `rv64uc-v` extends Suite
+
+      object `rv64ud-p` extends Suite
+
+      object `rv64ud-v` extends Suite
+
+      object `rv64uf-p` extends Suite
+
+      object `rv64uf-v` extends Suite
+
+      object `rv64ui-p` extends Suite
+
+      object `rv64ui-v` extends Suite
+
+      object `rv64um-p` extends Suite
+
+      object `rv64um-v` extends Suite
+
+      object `rv64uzfh-p` extends Suite
+
+      object `rv64uzfh-v` extends Suite
+
+      object `rv64` extends Suite {
+        override def binaries = T {
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv64mi-p-csr")).filterNot(p => p.last.endsWith("rv64mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv64um")).map(PathRef(_))
+        }
+      }
+    }
+  }
+}
+
+object tests extends Module(){
+  object smoketest extends Module {
+    trait Test extends TaskModule {
+      override def defaultCommandName() = "run"
+
+      def bin: cases.Case
+
+      def run(args: String*) = T.command {
+        val proc = os.proc(Seq(cosim.emulator.elf().path.toString(), "--entrance", cases.entrance.compile().path.toString(), "--bin", bin.compile().path.toString, "--wave", (T.dest / "wave").toString) ++ args)
+        T.log.info(s"run test: ${bin.name} with:\n ${proc.command.map(_.value.mkString(" ")).mkString(" ")}")
+        proc.call()
+        PathRef(T.dest)
+      }
+    }
+
+    object smoketest extends Test {
+      def bin = cases.smoketest
+    }
+
+  }
+  object riscvtests extends Module {
+
+    trait Test extends TaskModule {
+      override def defaultCommandName() = "run"
+
+      def bin: T[Seq[PathRef]]
+
+      def run(args: String*) = T.command {
+        bin().map { c =>
+          val name = c.path.last
+          val proc = os.proc(Seq(cosim.emulator.elf().path.toString(), "--entrance", cases.entrance.compile().path.toString(), "--bin", c.path.toString, "--wave", (T.dest / "wave").toString) ++ args)
+          T.log.info(s"run test: ${c.path.last} with:\n ${proc.command.map(_.value.mkString(" ")).mkString(" ")}")
+          val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true)
+
+          PathRef(if (p.exitCode != 0) {
+            os.move(T.dest / s"$name.running.log", T.dest / s"$name.failed.log")
+            System.err.println(s"Test $name failed with exit code ${p.exitCode}")
+            T.dest / s"$name.failed.log"
+          } else {
+            os.move(T.dest / s"$name.running.log", T.dest / s"$name.passed.log")
+            T.dest / s"$name.passed.log"
+          })
+        }
+      }
+
+    }
+
+    object smoketest extends Test {
+      def bin = Seq(cases.smoketest.compile())
+    }
+
+    object `rv64` extends Test {
+      def bin = cases.riscvtests.test.`rv64`.binaries
+    }
+
+    object `rv64si-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64si-p`.binaries
+    }
+
+
+    object `rv64mi-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64mi-p`.binaries
+    }
+
+    object `rv64ua-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64ua-p`.binaries
+    }
+
+    object `rv64ua-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64ua-v`.binaries
+    }
+
+    object `rv64uc-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64uc-p`.binaries
+    }
+
+    object `rv64uc-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64uc-v`.binaries
+    }
+
+    object `rv64ud-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64ud-p`.binaries
+    }
+
+    object `rv64ud-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64ud-v`.binaries
+    }
+
+    object `rv64uf-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64uf-p`.binaries
+    }
+
+    object `rv64uf-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64uf-v`.binaries
+    }
+
+    object `rv64ui-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64ui-p`.binaries
+    }
+
+    object `rv64ui-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64ui-v`.binaries
+    }
+
+    object `rv64uzfh-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64uzfh-p`.binaries
+    }
+
+    object `rv64uzfh-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64uzfh-p`.binaries
+    }
+
+    object `rv64um-p` extends Test {
+      def bin = cases.riscvtests.test.`rv64um-p`.binaries
+    }
+
+    object `rv64um-v` extends Test {
+      def bin = cases.riscvtests.test.`rv64um-v`.binaries
+    }
+
+  }
+
 }
