@@ -113,8 +113,12 @@ object cosim extends Module {
     def rtls = T.persistent {
       os.read(elaborate().path / "filelist.f").split("\n").map(str =>
         try {
-          os.Path(str)
-        } catch {
+          /** replace relative path with absolute path */
+          val absstr = elaborate().path.toString() ++"/"++ str.drop(2)
+          val path = if(str.startsWith("./")) absstr else str
+          os.Path(path)
+
+    } catch {
           case e: IllegalArgumentException if e.getMessage.contains("is not an absolute path") =>
             elaborate().path / str
         }
