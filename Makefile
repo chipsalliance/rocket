@@ -23,5 +23,14 @@ bsp:
 compile:
 	mill -i -j 0 __.compile
 
+test:
+	mill -i -j 0 tests.run.rv64default.run
+
+riscvtests:
+	mill -i -j 0 tests.riscvtests.rv64
+
+smoketest:
+	mill -i -j 0 tests.smoketest.smoketest
+
 clean:
 	git clean -fd
