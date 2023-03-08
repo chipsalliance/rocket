@@ -1,4 +1,4 @@
-package cosim.elaborate
+package cosim.myelaborate
 
 import chisel3._
 import freechips.rocketchip.diplomacy.{AddressSet, BundleBridgeSource, InModuleBody, LazyModule, RegionType, SimpleLazyModule, TransferSizes}

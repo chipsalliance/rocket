@@ -121,4 +121,82 @@ object cosim extends Module {
       ).filter(p => p.ext == "v" || p.ext == "sv").map(PathRef(_)).toSeq
     }
   }
+
+  object myelaborate extends ScalaModule with ScalafmtModule {
+    def scalaVersion = T {
+      v.scala
+    }
+
+    override def moduleDeps = Seq(mycde, myrocketchip)
+
+    override def scalacOptions = T {
+      Seq(s"-Xplugin:${mychisel3.plugin.jar().path}")
+    }
+
+    override def ivyDeps = Agg(
+      v.mainargs,
+      v.osLib
+    )
+
+    def elaborate = T {
+      // class path for `moduleDeps` is only a directory, not a jar, which breaks the cache.
+      // so we need to manually add the class files of `moduleDeps` here.
+      upstreamCompileOutput()
+      mill.modules.Jvm.runLocal(
+        finalMainClass(),
+        runClasspath().map(_.path),
+        Seq(
+          "--dir", T.dest.toString,
+        ),
+      )
+      PathRef(T.dest)
+    }
+
+    def chiselAnno = T {
+      os.walk(elaborate().path).collectFirst { case p if p.last.endsWith("anno.json") => p }.map(PathRef(_)).get
+    }
+
+    def chirrtl = T {
+      os.walk(elaborate().path).collectFirst { case p if p.last.endsWith("fir") => p }.map(PathRef(_)).get
+    }
+
+    def topName = T {
+      chirrtl().path.last.split('.').head
+    }
+
+
+  }
+
+  object mfccompile extends Module {
+
+    def compile = T {
+      os.proc("firtool",
+        myelaborate.chirrtl().path,
+        s"--annotation-file=${myelaborate.chiselAnno().path}",
+        "-disable-infer-rw",
+        "-dedup",
+        "-O=debug",
+        "--split-verilog",
+        "--preserve-values=named",
+        "--output-annotation-file=mfc.anno.json",
+        s"-o=${T.dest}"
+      ).call(T.dest)
+      PathRef(T.dest)
+    }
+
+    def rtls = T {
+      os.read(compile().path / "filelist.f").split("\n").map(str =>
+        try {
+          os.Path(str)
+        } catch {
+          case e: IllegalArgumentException if e.getMessage.contains("is not an absolute path") =>
+            compile().path / str.stripPrefix("./")
+        }
+      ).filter(p => p.ext == "v" || p.ext == "sv").map(PathRef(_)).toSeq
+    }
+
+    def annotations = T {
+      os.walk(compile().path).filter(p => p.last.endsWith("mfc.anno.json")).map(PathRef(_))
+    }
+  }
 }
