@@ -8,7 +8,6 @@ import firrtl.AnnotationSeq
 import firrtl.stage.FirrtlCircuitAnnotation
 import mainargs._
 
-
 object Main {
   @main def elaborate(@arg(name = "dir") dir: String) = {
     var topName: String = null
@@ -17,9 +16,7 @@ object Main {
       new chisel3.tests.elaborate.Convert
     ).foldLeft(
       Seq(
-        ChiselGeneratorAnnotation(() => new DUT(
-          new cosimConfig
-        ))
+        ChiselGeneratorAnnotation(() => new DUT(new cosimConfig) )
       ): AnnotationSeq
     ) { case (annos, stage) => stage.transform(annos) }
       .flatMap {

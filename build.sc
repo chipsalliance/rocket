@@ -134,20 +134,24 @@ object cosim extends Module {
   }
 
   object myelaborate extends ScalaModule with ScalafmtModule {
-    def scalaVersion = T {
-      v.scala
+    override def scalacPluginClasspath = T {
+      Agg(mychisel3.plugin.jar())
     }
+
+    override def scalacOptions = T {
+      super.scalacOptions() ++ Some(mychisel3.plugin.jar()).map(path => s"-Xplugin:${path.path}") ++ Seq("-Ymacro-annotations")
+    }
+
+    override def scalaVersion = v.scala
 
     override def moduleDeps = Seq(mycde, myrocketchip)
 
-    override def scalacOptions = T {
-      Seq(s"-Xplugin:${mychisel3.plugin.jar().path}")
+    override def ivyDeps = T {
+      Seq(
+        v.mainargs,
+        v.osLib
+      )
     }
-
-    override def ivyDeps = Agg(
-      v.mainargs,
-      v.osLib
-    )
 
     def elaborate = T {
       // class path for `moduleDeps` is only a directory, not a jar, which breaks the cache.
@@ -175,7 +179,6 @@ object cosim extends Module {
       chirrtl().path.last.split('.').head
     }
 
-
   }
 
   object mfccompile extends Module {
@@ -184,24 +187,30 @@ object cosim extends Module {
       os.proc("firtool",
         myelaborate.chirrtl().path,
         s"--annotation-file=${myelaborate.chiselAnno().path}",
+        "--disable-annotation-unknown",
         "-disable-infer-rw",
         "-dedup",
         "-O=debug",
         "--split-verilog",
         "--preserve-values=named",
         "--output-annotation-file=mfc.anno.json",
+        "--lowering-options=verifLabels",
         s"-o=${T.dest}"
       ).call(T.dest)
       PathRef(T.dest)
     }
 
-    def rtls = T {
+    def rtls = T.persistent {
       os.read(compile().path / "filelist.f").split("\n").map(str =>
         try {
-          os.Path(str)
+          /** replace relative path with absolute path */
+          val absstr = compile().path.toString() ++ "/" ++ str.drop(2)
+          val path = if (str.startsWith("./")) absstr else str
+          os.Path(path)
+
         } catch {
           case e: IllegalArgumentException if e.getMessage.contains("is not an absolute path") =>
-            compile().path / str.stripPrefix("./")
+            compile().path / str
         }
       ).filter(p => p.ext == "v" || p.ext == "sv").map(PathRef(_)).toSeq
     }
@@ -222,7 +231,7 @@ object cosim extends Module {
     }
 
     def vsrcs = T.persistent {
-      elaborate.rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
+      mfccompile.rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
     }
 
     def allCSourceFiles = T {
@@ -230,25 +239,7 @@ object cosim extends Module {
     }
 
     val topName = "V"
-
-    def verilatorConfig = T {
-      val traceConfigPath = T.dest / "verilator.vlt"
-      os.write(
-        traceConfigPath,
-        "`verilator_config\n" +
-          ujson.read(cosim.elaborate.annos().collectFirst(f => os.read(f.path)).get).arr.flatMap {
-            case anno if anno("class").str == "chisel3.experimental.Trace$TraceAnnotation" =>
-              Some(anno("target").str)
-            case _ => None
-          }.toSet.map { t: String =>
-            val s = t.split('|').last.split("/").last
-            val M = s.split(">").head.split(":").last
-            val S = s.split(">").last
-            s"""//$t\npublic_flat_rd -module "$M" -var "$S""""
-          }.mkString("\n")
-      )
-      PathRef(traceConfigPath)
-    }
+    
 
     def CMakeListsString = T {
       // format: off
@@ -282,7 +273,6 @@ object cosim extends Module {
          |verilate(${topName}
          |  SOURCES
          |${vsrcs().map(_.path).mkString("\n")}
-         |${verilatorConfig().path.toString}
          |  TRACE_FST
          |  TOP_MODULE DUT
          |  PREFIX V${topName}
@@ -303,7 +293,6 @@ object cosim extends Module {
         "--output-split 20000",
         "--output-split-cfuncs 20000",
         "--max-num-width 1048576",
-        "--vpi"
         // format: on
       )
     }

@@ -8,7 +8,6 @@ import org.chipsalliance.cde.config.{Config, Field}
 import freechips.rocketchip.rocket.{DCacheParams, FrontendModule, ICacheModule, ICacheParams, MulDivParams, Rocket, RocketCoreParams}
 import freechips.rocketchip.tile.RocketTileParams
 
-
 object RocketTileParamsKey extends Field[RocketTileParams]
 
 class cosimConfig extends Config((site, here, up) => {
