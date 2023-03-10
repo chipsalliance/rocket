@@ -23,6 +23,9 @@ bsp:
 compile:
 	mill -i -j 0 __.compile
 
+elf:
+	mill -i -j 0 cosim.emulator.elf
+
 test:
 	mill -i -j 0 tests.run.rv64default.run
 
