@@ -178,12 +178,21 @@ in
   };
 
   verilator = prev.verilator.overrideAttrs (old: {
+    version = "5.008";
+
     src = final.fetchFromGitHub {
       owner = "verilator";
       repo = "verilator";
-      rev = "2e4f5c863ffa6ab1afca883559ee5a6ca989e9d7";
-      sha256 = "sha256-jANlrumSGISeNB7MDrXqY2G6jMgrPApzk/1SoO92N2Y=";
-    };
+      rev = "21093fd1bd36fed8943f67868ddc8f75f41e4488";
+      sha256 = "sha256-+eJBGvQOk5w+PyUF3aieuXZVeKNS4cKQqHnJibKwFnM=";
+     };
+
+    nativeBuildInputs = with final; [ flex bison python3 autoconf help2man ];
+
+    postPatch = ''
+        patchShebangs bin/* src/{flexfix,vlcovgen} test_regress/{driver.pl,t/*.pl}
+    '';
+
   });
 
   mill = prev.mill.override { jre = final.openjdk17; };
