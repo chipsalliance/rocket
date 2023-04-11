@@ -84,56 +84,6 @@ object diplomatic extends common.DiplomaticModule { m =>
 
 object cosim extends Module {
   object elaborate extends ScalaModule with ScalafmtModule {
-    def scalaVersion = T {
-      v.scala
-    }
-
-    override def moduleDeps = Seq(mycde, myrocketchip)
-
-    override def scalacOptions = T {
-      Seq(s"-Xplugin:${mychisel3.plugin.jar().path}")
-    }
-
-    override def ivyDeps = Agg(
-      v.mainargs,
-      v.osLib
-    )
-
-    def elaborate = T.persistent {
-      mill.modules.Jvm.runSubprocess(
-        finalMainClass(),
-        runClasspath().map(_.path),
-        forkArgs(),
-        forkEnv(),
-        Seq(
-          "--dir", T.dest.toString,
-        ),
-        workingDir = forkWorkingDir()
-      )
-      PathRef(T.dest)
-    }
-
-    def rtls = T.persistent {
-      os.read(elaborate().path / "filelist.f").split("\n").map(str =>
-        try {
-          /** replace relative path with absolute path */
-          val absstr = elaborate().path.toString() ++"/"++ str.drop(2)
-          val path = if(str.startsWith("./")) absstr else str
-          os.Path(path)
-
-    } catch {
-          case e: IllegalArgumentException if e.getMessage.contains("is not an absolute path") =>
-            elaborate().path / str
-        }
-      ).filter(p => p.ext == "v" || p.ext == "sv").map(PathRef(_)).toSeq
-    }
-
-    def annos = T.persistent {
-      os.walk(elaborate().path).filter(p => p.last.endsWith("anno.json")).map(PathRef(_))
-    }
-  }
-
-  object myelaborate extends ScalaModule with ScalafmtModule {
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
     }
@@ -185,8 +135,8 @@ object cosim extends Module {
 
     def compile = T {
       os.proc("firtool",
-        myelaborate.chirrtl().path,
-        s"--annotation-file=${myelaborate.chiselAnno().path}",
+        elaborate.chirrtl().path,
+        s"--annotation-file=${elaborate.chiselAnno().path}",
         "--disable-annotation-unknown",
         "-disable-infer-rw",
         "-dedup",
