@@ -269,6 +269,107 @@ object cosim extends Module {
       PathRef(elf)
     }
   }
+
+  object emulatorDev extends Module {
+
+    def csources = T.source {
+      millSourcePath / "src"
+    }
+
+    def csrcDir = T {
+      PathRef(millSourcePath / "src")
+    }
+
+    def vsrcs = T.persistent {
+      mfccompile.rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
+    }
+
+    def allCSourceFiles = T {
+      Lib.findSourceFiles(Seq(csrcDir()), Seq("S", "s", "c", "cpp", "cc")).map(PathRef(_))
+    }
+
+    val topName = "TestBench"
+
+    def CMakeListsString = T {
+      // format: off
+      s"""cmake_minimum_required(VERSION 3.20)
+         |set(CMAKE_CXX_STANDARD 17)
+         |set(CMAKE_CXX_COMPILER_ID "clang")
+         |set(CMAKE_C_COMPILER "clang")
+         |set(CMAKE_CXX_COMPILER "clang++")
+         |
+         |project(emulator)
+         |
+         |find_package(args REQUIRED)
+         |find_package(glog REQUIRED)
+         |find_package(fmt REQUIRED)
+         |find_package(libspike REQUIRED)
+         |find_package(verilator REQUIRED)
+         |find_package(Threads REQUIRED)
+         |set(THREADS_PREFER_PTHREAD_FLAG ON)
+         |
+         |set(CMAKE_CXX_FLAGS "$${CMAKE_CXX_FLAGS} -DVERILATOR")
+         |
+         |add_executable(${topName}
+         |${allCSourceFiles().map(_.path).mkString("\n")}
+         |)
+         |
+         |target_include_directories(${topName} PUBLIC ${csources().path.toString})
+         |
+         |target_link_libraries(${topName} PUBLIC $${CMAKE_THREAD_LIBS_INIT})
+         |target_link_libraries(${topName} PUBLIC libspike fmt glog)  # note that libargs is header only, nothing to link
+         |
+         |verilate(${topName}
+         |  SOURCES
+         |${vsrcs().map(_.path).mkString("\n")}
+         |  TRACE_FST
+         |  TOP_MODULE TestBench
+         |  PREFIX VTestBench
+         |  OPT_FAST
+         |  THREADS 8
+         |  VERILATOR_ARGS ${verilatorArgs().mkString(" ")}
+         |)
+         |""".stripMargin
+      // format: on
+    }
+
+    def verilatorArgs = T.input {
+      Seq(
+        // format: off
+        "-Wno-UNOPTTHREADS", "-Wno-STMTDLY", "-Wno-LATCH", "-Wno-WIDTH",
+        "--x-assign unique",
+        "+define+RANDOMIZE_GARBAGE_ASSIGN",
+        "--output-split 20000",
+        "--output-split-cfuncs 20000",
+        "--max-num-width 1048576",
+        "--main",
+        "--timing"
+        // format: on
+      )
+    }
+
+    def elf = T.persistent {
+      val path = T.dest / "CMakeLists.txt"
+      os.write.over(path, CMakeListsString())
+      T.log.info(s"CMake project generated in $path,\nverilating...")
+      os.proc(
+        // format: off
+        "cmake",
+        "-G", "Ninja",
+        T.dest.toString
+        // format: on
+      ).call(T.dest)
+      T.log.info("compile rtl to emulator...")
+      os.proc(
+        // format: off
+        "ninja"
+        // format: on
+      ).call(T.dest)
+      val elf = T.dest / topName
+      T.log.info(s"verilated exe generated: ${elf.toString}")
+      PathRef(elf)
+    }
+  }
 }
 
 object cases extends Module {
