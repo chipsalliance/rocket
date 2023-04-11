@@ -1,4 +1,4 @@
-package cosim.myelaborate
+package cosim.elaborate
 
 import chisel3._
 import chisel3.aop.Select

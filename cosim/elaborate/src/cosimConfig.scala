@@ -1,4 +1,4 @@
-package cosim.myelaborate
+package cosim.elaborate
 
 import freechips.rocketchip.devices.debug.DebugModuleKey
 import freechips.rocketchip.diplomacy.MonitorsEnabled

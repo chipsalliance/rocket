@@ -18,7 +18,7 @@ package sifive {
 }
 
 package cosim {
-  package myelaborate {
+  package elaborate {
 
     import chisel3._
     import chisel3.experimental.ChiselAnnotation
