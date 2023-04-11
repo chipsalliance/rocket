@@ -144,7 +144,7 @@ object cosim extends Module {
 
     override def scalaVersion = v.scala
 
-    override def moduleDeps = Seq(mycde, myrocketchip)
+    override def moduleDeps = Seq(mycde, myrocketchip, mytilelink)
 
     override def ivyDeps = T {
       Seq(
