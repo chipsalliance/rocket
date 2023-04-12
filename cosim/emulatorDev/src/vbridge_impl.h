@@ -10,6 +10,8 @@
 #include "simple_sim.h"
 #include "util.h"
 
+#include <svdpi.h>
+
 class VBridgeImpl {
 public:
   explicit VBridgeImpl();

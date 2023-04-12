@@ -57,4 +57,9 @@ void VBridgeImpl::dpiDumpWave() {
   })
 }
 
+[[maybe_unused]] void dpiBasePoke(svBitVecVal *resetVector) {
+    uint32_t v = 0x1000;
+    *resetVector = v;
+}
+
 
