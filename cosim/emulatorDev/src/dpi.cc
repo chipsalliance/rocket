@@ -62,4 +62,8 @@ void VBridgeImpl::dpiDumpWave() {
     *resetVector = v;
 }
 
+[[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
+  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}",*address);
+}
+
 

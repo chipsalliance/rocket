@@ -16,19 +16,18 @@ import org.chipsalliance.tilelink.bundle._
 class TestBench extends RawModule {
   val clock = Wire(Clock())
   val reset = Wire(Bool())
-  val verificationModule = Module(new VerificationModule)
   val dut = withClockAndReset(clock, reset) {
     Module(
       new DUT(new cosimConfig)
     )
   }
+  val verificationModule = Module(new VerificationModule(dut))
   clock := verificationModule.clock
   reset := verificationModule.reset
 
   dut.nmi := verificationModule.nmi
   dut.intIn := verificationModule.intIn
   dut.resetVector := verificationModule.resetVector
-  dontTouch(dut.resetVector)
   dut.memory_0_a <> verificationModule.tlportA
   dut.memory_0_b <> verificationModule.tlportB
   dut.memory_0_c <> verificationModule.tlportC

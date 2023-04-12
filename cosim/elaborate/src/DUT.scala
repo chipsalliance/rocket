@@ -92,6 +92,8 @@ class DUT(p: Parameters) extends Module {
   val memory_0_d = IO(Flipped(Decoupled(new TLChannelD(tlDParam))))
   val memory_0_e = IO(Decoupled(new TLChannelE(tlEParam)))
 
+  dontTouch(memory_0_a)
+
   val nmi = IO(Input(new NMI(32)))
   val intIn = IO(Input(Bool()))
   val resetVector = IO(Input(UInt(32.W)))

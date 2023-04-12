@@ -7,7 +7,7 @@ import cosim.elaborate.TapModule
 import freechips.rocketchip.tile.NMI
 import org.chipsalliance.tilelink.bundle.{TLChannelA, TLChannelB, TLChannelC, TLChannelD, TLChannelE, TileLinkChannelAParameter, TileLinkChannelBParameter, TileLinkChannelCParameter, TileLinkChannelDParameter, TileLinkChannelEParameter}
 
-class VerificationModule extends TapModule {
+class VerificationModule(dut:DUT) extends TapModule {
   val clockRate = 5
 
   val clock = IO(Output(Clock()))
@@ -15,6 +15,18 @@ class VerificationModule extends TapModule {
   val resetVector = IO(Output(UInt(32.W)))
   val nmi = IO(Output(new NMI(32)))
   val intIn = IO(Output(Bool()))
+
+  val tlAParam = TileLinkChannelAParameter(32, 2, 64, 3)
+  val tlBParam = TileLinkChannelBParameter(32, 2, 64, 3)
+  val tlCParam = TileLinkChannelCParameter(32, 2, 64, 3)
+  val tlDParam = TileLinkChannelDParameter(32, 2, 64, 2)
+  val tlEParam = TileLinkChannelEParameter(2)
+
+  val tlportA = IO(Flipped(Decoupled(new TLChannelA(tlAParam))))
+  val tlportB = IO(Decoupled(new TLChannelB(tlBParam)))
+  val tlportC = IO(Flipped(Decoupled(new TLChannelC(tlCParam))))
+  val tlportD = IO(Decoupled(new TLChannelD(tlDParam)))
+  val tlportE = IO(Flipped(Decoupled(new TLChannelE(tlEParam))))
 
   val verbatim = Module(new ExtModule with HasExtModuleInline {
     override val desiredName = "Verbatim"
@@ -90,22 +102,31 @@ class VerificationModule extends TapModule {
   dpiBasePoke.clock := clock
   resetVector := dpiBasePoke.resetVector
 
-  val tlAParam = TileLinkChannelAParameter(32, 2, 64, 3)
-  val tlBParam = TileLinkChannelBParameter(32, 2, 64, 3)
-  val tlCParam = TileLinkChannelCParameter(32, 2, 64, 3)
-  val tlDParam = TileLinkChannelDParameter(32, 2, 64, 2)
-  val tlEParam = TileLinkChannelEParameter(2)
+  val dpiBasePeek = Module(new ExtModule with HasExtModuleInline {
+    override val desiredName = "dpiBasePeek"
+    val clock = IO(Input(Clock()))
+    val address = IO(Input(UInt(32.W)))
+    setInline(
+      s"$desiredName.sv",
+      s"""module $desiredName(
+         |  input clock,
+         |  input [31:0] address
+         |);
+         |  import "DPI-C" function void dpiBasePeek(input bit[31:0] address);
+         |
+         |  always @ (negedge clock) $desiredName(address);
+         |endmodule
+         |""".stripMargin
+    )
+  })
+  dpiBasePeek.address := tlportA.bits.address
+  dpiBasePeek.clock := clock
 
-  val tlportA = IO(Flipped(Decoupled(new TLChannelA(tlAParam))))
-  val tlportB = IO(Decoupled(new TLChannelB(tlBParam)))
-  val tlportC = IO(Flipped(Decoupled(new TLChannelC(tlCParam))))
-  val tlportD = IO(Decoupled(new TLChannelD(tlDParam)))
-  val tlportE = IO(Flipped(Decoupled(new TLChannelE(tlEParam))))
 
-  tlportA.ready := false.B
-  dontTouch(tlportA.bits.address)
-  tlportC.ready := false.B
-  tlportE.ready := false.B
+
+  tlportA.ready := true.B
+  tlportC.ready := true.B
+  tlportE.ready := true.B
 
   tlportB.valid := false.B
   tlportB.bits.opcode := 0.U
