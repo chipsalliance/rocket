@@ -37,7 +37,7 @@ void sigint_handler(int s) {
 #if VM_TRACE
 void VBridgeImpl::dpiDumpWave() {
   TRY({
-    ::dpiDumpWave("wave.fst");
+    ::dpiDumpWave((wave + ".fst").c_str());
   })
 }
 #endif

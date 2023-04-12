@@ -33,3 +33,7 @@ namespace google {
 #define CHECK_LT_S(val1, val2) CHECK_OP_S(_LT, <, val1, val2)
 #define CHECK_GE_S(val1, val2) CHECK_OP_S(_GE, >=, val1, val2)
 #define CHECK_GT_S(val1, val2) CHECK_OP_S(_GT, >, val1, val2)
+
+#define CHECK_S(condition)  \
+      LOG_IF(FATAL_S, GOOGLE_PREDICT_BRANCH_NOT_TAKEN(!(condition))) \
+             << "Check failed: " #condition " "

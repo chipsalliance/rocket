@@ -35,5 +35,8 @@ riscvtests:
 smoketest:
 	mill -i -j 0 tests.smoketest.smoketest
 
+tmptest:
+	mill -i -j 0 tests.tmptest.tmptest
+
 clean:
 	git clean -fd

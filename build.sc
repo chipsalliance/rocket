@@ -688,4 +688,29 @@ object tests extends Module(){
 
   }
 
+  object tmptest extends Module {
+    trait Test extends TaskModule {
+      override def defaultCommandName() = "run"
+
+      def run(args: String*) = T.command {
+
+        val runEnv = Map(
+          "COSIM_bin" -> "/home/yyq/Projects/rv64mi-p-access.elf",
+          "COSIM_entrance_bin" -> "/home/yyq/Projects/rrocket/out/cases/entrance/compile.dest/entrance",
+          "COSIM_wave" -> (T.dest / "wave").toString,
+          "COSIM_reset_vector" -> "80000000",
+        )
+        T.log.info(s"run test: xx with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulatorDev.elf().path.toString()}")
+        os.proc(Seq(cosim.emulatorDev.elf().path.toString())).call(env = runEnv)
+        PathRef(T.dest)
+      }
+    }
+
+    object tmptest extends Test {
+
+
+    }
+
+  }
+
 }
