@@ -38,7 +38,7 @@ uint64_t VBridgeImpl::get_t() {
 }
 
 void VBridgeImpl::timeoutCheck() {
-  if (get_t() > 10000) {
+  if (get_t() > 1000) {
     LOG(FATAL_S) << fmt::format("Simulation timeout, t={}", get_t());
   }
 }
@@ -65,6 +65,26 @@ void VBridgeImpl::init_spike() {
   sim.load(bin, ebin, reset_vector);
   LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, wave={}, reset_vector={:#x}",
                            bin, wave, reset_vector);
+}
+
+void VBridgeImpl::dpiPeekTL(const TlInterface &tl_peek) {
+  VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
+  LOG(INFO) << fmt::format("DpiTLPeek address ={:08X}, valid = {}",tl_peek.a_bits_address,tl_peek.a_valid);
+
+}
+
+void VBridgeImpl::dpiPokeTL(const TlInterfacePoke &tl_poke) {
+  VLOG(3) << fmt::format("[{}] dpiPokeTL", get_t());
+  *tl_poke.d_valid=0;
+  *tl_poke.d_bits_param = 0;
+  *tl_poke.d_bits_size=0;
+  *tl_poke.d_bits_source=0;
+  *tl_poke.d_bits_sink=0;
+  *tl_poke.d_bits_denied=0;
+  *tl_poke.d_bits_data=0;
+  *tl_poke.d_corrupt=0;
+  *tl_poke.d_valid=0;
+  *tl_poke.a_ready=true;
 }
 
 VBridgeImpl vbridge_impl_instance;

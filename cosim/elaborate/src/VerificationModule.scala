@@ -177,59 +177,59 @@ class VerificationModule(dut:DUT) extends TapModule {
     )
   }
 
-//  class PokeTL(param_d: TileLinkChannelDParameter) extends ExtModule with HasExtModuleInline {
-//    override val desiredName = "dpiPokeTL"
-//    @public val clock = IO(Input(Clock()))
-//    @public val dBits: TLChannelD = IO(Output(new TLChannelD(param_d)))
-//    @public val dValid = IO(Output(Bool()))
-//    @public val aReady = IO(Output(Bool()))
-//    @public val dReady = IO(Input(Bool()))
-//    setInline(
-//      s"$desiredName.sv",
-//      s"""module $desiredName(
-//         |  input clock,
-//         |  output bit[${dBits.opcode.getWidth - 1}:0] dBits_opcode,
-//         |  output bit[${dBits.param.getWidth - 1}:0] dBits_param,
-//         |  output bit[${dBits.size.getWidth - 1}:0] dBits_size,
-//         |  output bit[${dBits.source.getWidth - 1}:0] dBits_source,
-//         |  output bit[${dBits.sink.getWidth - 1}:0] dBits_sink,
-//         |  output bit[${dBits.denied.getWidth - 1}:0] dBits_denied,
-//         |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
-//         |  output bit dBits_corrupt,
-//         |  output bit dValid,
-//         |  output bit aReady,
-//         |  input bit dReady
-//         |);
-//         |import "DPI-C" function void $desiredName(
-//         |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
-//         |  output bit[${dBits.param.getWidth - 1}:0] d_param,
-//         |  output bit[${dBits.size.getWidth - 1}:0] d_size,
-//         |  output bit[${dBits.source.getWidth - 1}:0] d_source,
-//         |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
-//         |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
-//         |  output bit[${dBits.data.getWidth - 1}:0] d_data,
-//         |  output bit d_corrupt,
-//         |  output bit d_valid,
-//         |  output bit a_ready,
-//         |  input bit d_ready
-//         |);
-//         |always @ (posedge clock) #($latPokeTL) $desiredName(
-//         |  dBits_opcode,
-//         |  dBits_param,
-//         |  dBits_size,
-//         |  dBits_source,
-//         |  dBits_sink,
-//         |  dBits_denied,
-//         |  dBits_data,
-//         |  dBits_corrupt,
-//         |  dValid,
-//         |  aReady,
-//         |  dReady
-//         |);
-//         |endmodule
-//         |""".stripMargin
-//    )
-//  }
+  class PokeTL(param_d: TileLinkChannelDParameter) extends ExtModule with HasExtModuleInline {
+    override val desiredName = "dpiPokeTL"
+    @public val clock = IO(Input(Clock()))
+    @public val dBits: TLChannelD = IO(Output(new TLChannelD(param_d)))
+    @public val dValid = IO(Output(Bool()))
+    @public val aReady = IO(Output(Bool()))
+    @public val dReady = IO(Input(Bool()))
+    setInline(
+      s"$desiredName.sv",
+      s"""module $desiredName(
+         |  input clock,
+         |  output bit[${dBits.opcode.getWidth - 1}:0] dBits_opcode,
+         |  output bit[${dBits.param.getWidth - 1}:0] dBits_param,
+         |  output bit[${dBits.size.getWidth - 1}:0] dBits_size,
+         |  output bit[${dBits.source.getWidth - 1}:0] dBits_source,
+         |  output bit[${dBits.sink.getWidth - 1}:0] dBits_sink,
+         |  output bit[${dBits.denied.getWidth - 1}:0] dBits_denied,
+         |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
+         |  output bit dBits_corrupt,
+         |  output bit dValid,
+         |  output bit aReady,
+         |  input bit dReady
+         |);
+         |import "DPI-C" function void $desiredName(
+         |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
+         |  output bit[${dBits.param.getWidth - 1}:0] d_param,
+         |  output bit[${dBits.size.getWidth - 1}:0] d_size,
+         |  output bit[${dBits.source.getWidth - 1}:0] d_source,
+         |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
+         |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
+         |  output bit[${dBits.data.getWidth - 1}:0] d_data,
+         |  output bit d_corrupt,
+         |  output bit d_valid,
+         |  output bit a_ready,
+         |  input bit d_ready
+         |);
+         |always @ (posedge clock) #2 $desiredName(
+         |  dBits_opcode,
+         |  dBits_param,
+         |  dBits_size,
+         |  dBits_source,
+         |  dBits_sink,
+         |  dBits_denied,
+         |  dBits_data,
+         |  dBits_corrupt,
+         |  dValid,
+         |  aReady,
+         |  dReady
+         |);
+         |endmodule
+         |""".stripMargin
+    )
+  }
 
   val dpiPeekTL = Module(new PeekTL(tlAParam))
   dpiPeekTL.clock := clock
@@ -237,12 +237,12 @@ class VerificationModule(dut:DUT) extends TapModule {
   dpiPeekTL.aValid := tlportA.valid
   dpiPeekTL.dReady := tlportD.ready
 
-//  val dpiPokeTL = Module(new PokeTL(tlDParam))
-//  dpiPokeTL.clock := clock
-//  tlportD.bits := dpiPokeTL.dBits
-//  tlportD.valid := dpiPokeTL.dValid
-//  tlportA.ready := dpiPokeTL.aReady
-//  dpiPokeTL.dReady := tlportD.ready
+  val dpiPokeTL = Module(new PokeTL(tlDParam))
+  dpiPokeTL.clock := clock
+  tlportD.bits := dpiPokeTL.dBits
+  tlportD.valid := dpiPokeTL.dValid
+  tlportA.ready := dpiPokeTL.aReady
+  dpiPokeTL.dReady := tlportD.ready
 
 
 
@@ -261,13 +261,4 @@ class VerificationModule(dut:DUT) extends TapModule {
   tlportB.bits.data := 0.U
   tlportB.bits.corrupt := 0.U
 
-  tlportD.valid := false.B
-  tlportD.bits.opcode := 0.U
-  tlportD.bits.param := 0.U
-  tlportD.bits.size := 0.U
-  tlportD.bits.source := 0.U
-  tlportD.bits.data := 0.U
-  tlportD.bits.corrupt := 0.U
-  tlportD.bits.denied := 0.U
-  tlportD.bits.sink := 0.U
 }

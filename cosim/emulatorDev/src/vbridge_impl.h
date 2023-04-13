@@ -9,6 +9,7 @@
 
 #include "simple_sim.h"
 #include "util.h"
+#include "encoding.h"
 
 #include <svdpi.h>
 
@@ -29,6 +30,9 @@ public:
   }
 
   uint64_t get_t();
+
+  void dpiPokeTL(const TlInterfacePoke &tl_poke);
+  void dpiPeekTL(const TlInterface &tl_peek);
 
 
 private:

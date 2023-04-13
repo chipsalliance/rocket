@@ -78,7 +78,35 @@ void VBridgeImpl::dpiDumpWave() {
     svBit a_valid,
     svBit d_ready
 ) {
-  LOG(INFO) << fmt::format("DpiTLPeek address ={:08X}, valid = {}",*a_address,a_valid);
+  TRY({
+    vbridge_impl_instance.dpiPeekTL(
+        TlInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
+                     a_corrupt, a_valid, d_ready});
+  })
+}
+
+[[maybe_unused]] void dpiPokeTL(
+    svBitVecVal *d_opcode,
+    svBitVecVal *d_param,
+    svBitVecVal *d_size,
+    svBitVecVal *d_source,
+    svBitVecVal *d_sink,
+    svBitVecVal *d_denied,
+    svBitVecVal *d_data,
+    svBit *d_corrupt,
+    svBit *d_valid,
+    svBit *a_ready,
+    svBit d_ready
+) {
+  TRY({
+    vbridge_impl_instance.dpiPokeTL(
+        TlInterfacePoke{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
+                         d_corrupt, d_valid, a_ready, d_ready});
+  })
+
+
+
+
 
 }
 
