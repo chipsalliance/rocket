@@ -692,11 +692,14 @@ object tests extends Module(){
     trait Test extends TaskModule {
       override def defaultCommandName() = "run"
 
+
       def run(args: String*) = T.command {
+        val bin = os.pwd / "rv64mi-p-access.elf"
 
         val runEnv = Map(
-          "COSIM_bin" -> "/home/yyq/Projects/rv64mi-p-access.elf",
-          "COSIM_entrance_bin" -> "/home/yyq/Projects/rrocket/out/cases/entrance/compile.dest/entrance",
+          "COSIM_bin" -> bin.toString(),
+//          "COSIM_entrance_bin" -> "/home/yyq/Projects/rrocket/out/cases/entrance/compile.dest/entrance",
+          "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
           "COSIM_wave" -> (T.dest / "wave").toString,
           "COSIM_reset_vector" -> "80000000",
         )

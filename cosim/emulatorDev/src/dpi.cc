@@ -63,7 +63,23 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
-  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}",*address);
+//  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}",*address);
+}
+
+[[maybe_unused]] void dpiPeekTL(
+    const svBitVecVal *a_opcode,
+    const svBitVecVal *a_param,
+    const svBitVecVal *a_size,
+    const svBitVecVal *a_source,
+    const svBitVecVal *a_address,
+    const svBitVecVal *a_mask,
+    const svBitVecVal *a_data,
+    svBit a_corrupt,
+    svBit a_valid,
+    svBit d_ready
+) {
+  LOG(INFO) << fmt::format("DpiTLPeek address ={:08X}, valid = {}",*a_address,a_valid);
+
 }
 
 

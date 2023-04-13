@@ -2,6 +2,7 @@ package cosim.elaborate
 
 import chisel3._
 import chisel3.experimental.ExtModule
+import chisel3.experimental.hierarchy.{Definition, instantiable, public}
 import chisel3.util.{Decoupled, HasExtModuleInline}
 import cosim.elaborate.TapModule
 import freechips.rocketchip.tile.NMI
@@ -21,6 +22,9 @@ class VerificationModule(dut:DUT) extends TapModule {
   val tlCParam = TileLinkChannelCParameter(32, 2, 64, 3)
   val tlDParam = TileLinkChannelDParameter(32, 2, 64, 2)
   val tlEParam = TileLinkChannelEParameter(2)
+
+  val tlbundle_a = Flipped(Decoupled(new TLChannelA(tlAParam)))
+  tlbundle_a.bits
 
   val tlportA = IO(Flipped(Decoupled(new TLChannelA(tlAParam))))
   val tlportB = IO(Decoupled(new TLChannelB(tlBParam)))
@@ -121,6 +125,64 @@ class VerificationModule(dut:DUT) extends TapModule {
   })
   dpiBasePeek.address := tlportA.bits.address
   dpiBasePeek.clock := clock
+
+  @instantiable
+  class PeekTL(param_a: TileLinkChannelAParameter) extends ExtModule with HasExtModuleInline {
+    override val desiredName = "dpiPeekTL"
+    @public val clock = IO(Input(Clock()))
+    @public val aBits: TLChannelA = IO(Input(new TLChannelA(param_a)))
+    @public val aValid: Bool = IO(Input(Bool()))
+    @public val dReady: Bool = IO(Input(Bool()))
+    setInline(
+      "dpiPeekTL.sv",
+      s"""module $desiredName(
+         |  input clock,
+         |  input bit[${aBits.opcode.getWidth - 1}:0] aBits_opcode,
+         |  input bit[${aBits.param.getWidth - 1}:0] aBits_param,
+         |  input bit[${aBits.size.getWidth - 1}:0] aBits_size,
+         |  input bit[${aBits.source.getWidth - 1}:0] aBits_source,
+         |  input bit[${aBits.address.getWidth - 1}:0] aBits_address,
+         |  input bit[${aBits.mask.getWidth - 1}:0] aBits_mask,
+         |  input bit[${aBits.data.getWidth - 1}:0] aBits_data,
+         |  input bit aBits_corrupt,
+         |  input bit aValid,
+         |  input bit dReady
+         |);
+         |import "DPI-C" function void $desiredName(
+         |  input bit[${aBits.opcode.getWidth - 1}:0] a_opcode,
+         |  input bit[${aBits.param.getWidth - 1}:0] a_param,
+         |  input bit[${aBits.size.getWidth - 1}:0] a_size,
+         |  input bit[${aBits.source.getWidth - 1}:0] a_source,
+         |  input bit[${aBits.address.getWidth - 1}:0] a_address,
+         |  input bit[${aBits.mask.getWidth - 1}:0] a_mask,
+         |  input bit[${aBits.data.getWidth - 1}:0] a_data,
+         |  input bit a_corrupt,
+         |  input bit a_valid,
+         |  input bit d_ready
+         |);
+         |always @ (posedge clock) $desiredName(
+         |  aBits_opcode,
+         |  aBits_param,
+         |  aBits_size,
+         |  aBits_source,
+         |  aBits_address,
+         |  aBits_mask,
+         |  aBits_data,
+         |  aBits_corrupt,
+         |  aValid,
+         |  dReady
+         |);
+         |endmodule
+         |""".stripMargin
+    )
+  }
+
+  val dpiPeekTL = Module(new PeekTL(tlAParam))
+  dpiPeekTL.clock := clock
+  dpiPeekTL.aBits := tlportA.bits
+  dpiPeekTL.aValid := tlportA.valid
+  dpiPeekTL.dReady := tlportD.ready
+
 
 
 
