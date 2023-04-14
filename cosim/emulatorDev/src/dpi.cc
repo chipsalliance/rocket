@@ -64,7 +64,7 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
-//  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}",*address);
+  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}", *address);
 }
 
 [[maybe_unused]] void dpiPeekTL(
@@ -107,5 +107,39 @@ void VBridgeImpl::dpiDumpWave() {
 
 
 }
+
+[[maybe_unused]] void dpiRefillQueue(
+
+) {
+  TRY({
+        vbridge_impl_instance.dpiRefillQueue();
+      })
+
+
+}
+
+[[maybe_unused]] void dpiCommitPeek(
+    svBit rf_wen,
+    svBit wb_valid,
+    const svBitVecVal *rf_waddr,
+    const svBitVecVal *rf_wdata,
+    const svBitVecVal *wb_reg_pc,
+    const svBitVecVal *wb_reg_inst
+) {
+  TRY({
+        vbridge_impl_instance.dpiCommitPeek(CommitPeekInterface{
+            rf_wen,
+            wb_valid,
+            *rf_waddr,
+            *rf_wdata,
+            *wb_reg_pc,
+            *wb_reg_inst
+        });
+      })
+
+
+}
+
+
 
 

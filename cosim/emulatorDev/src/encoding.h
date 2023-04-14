@@ -26,6 +26,11 @@ struct TlPeekInterface {
   svBit d_ready;
 };
 
+struct TlPeekStatusInterface {
+    svBitVecVal pc;
+    svBit s2_miss;
+};
+
 struct TlPokeInterface {
   svBitVecVal *d_bits_opcode;
   svBitVecVal *d_bits_param;
@@ -41,45 +46,14 @@ struct TlPokeInterface {
   svBit d_ready;
 };
 
-struct VInstrInterfacePoke {
-  svBitVecVal *inst;
-  svBitVecVal *src1Data;
-  svBitVecVal *src2Data;
-  svBit *valid;
+
+struct CommitPeekInterface {
+  svBit rf_wen;
+  svBit wb_valid;
+  svBitVecVal rf_waddr;
+  svBitVecVal rf_wdata;
+  svBitVecVal wb_reg_pc;
+  svBitVecVal wb_reg_inst;
 };
 
-struct VRespInterface {
-  svBit valid;
-  svBitVecVal data;
-  svBit vxsat;
-};
 
-struct VInstrFire {
-  svBit ready;
-  svBitVecVal index;
-};
-
-struct VLsuWriteQueuePeek {
-  int mshr_index;
-  svBit write_valid;
-  svBitVecVal request_data_vd;
-  svBitVecVal request_data_offset;
-  svBitVecVal request_data_mask;
-  svBitVecVal request_data_data;
-  svBitVecVal request_data_instIndex;
-  svBitVecVal request_targetLane;
-};
-
-struct VrfWritePeek {
-  int lane_index;
-  svBit valid;
-  svBitVecVal request_vd;
-  svBitVecVal request_offset;
-  svBitVecVal request_mask;
-  svBitVecVal request_data;
-  svBitVecVal request_instIndex;
-};
-
-struct VLsuReqEnqPeek {
-  svBitVecVal enq;
-};

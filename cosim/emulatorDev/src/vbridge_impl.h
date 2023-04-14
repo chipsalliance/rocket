@@ -29,8 +29,14 @@ struct TLReqRecord {
     } op;
     int remaining_cycles;
 
-    TLReqRecord(uint64_t data, uint32_t size_by_byte, uint16_t source, opType op, int cycles) : data(data), size_by_byte(size_by_byte), source(source), op(op), remaining_cycles(cycles){};
+    TLReqRecord(uint64_t data, uint32_t size_by_byte, uint16_t source, opType op, int cycles) : data(data),
+                                                                                                size_by_byte(
+                                                                                                    size_by_byte),
+                                                                                                source(source), op(op),
+                                                                                                remaining_cycles(
+                                                                                                    cycles) {};
 };
+
 struct FetchRecord {
     uint64_t data;
     uint16_t source;
@@ -48,16 +54,26 @@ public:
     explicit VBridgeImpl();
 
     void dpiDumpWave();
+
     void dpiInitCosim();
+
     void dpiPokeTL(const TlPokeInterface &tl_poke);
+
     void dpiPeekTL(const TlPeekInterface &tl_peek);
+
+    void dpiRefillQueue();
+
+    void dpiCommitPeek(CommitPeekInterface cmInterface);
 
     void init_spike();
 
     uint64_t get_t();
+
     uint8_t load(uint64_t address);
+
     void timeoutCheck();
-    uint64_t getCycle() {return ctx->time();}
+
+    uint64_t getCycle() { return ctx->time(); }
 
 
 private:
@@ -85,16 +101,27 @@ private:
 
 
     //Spike
-    const size_t to_rtl_queue_size = 5;
+    const size_t to_rtl_queue_size = 3;
     std::list<SpikeEvent> to_rtl_queue;
 
     std::map<reg_t, TLReqRecord> tl_banks;
     FetchRecord fetch_banks[8];
     AquireRecord aquire_banks[8];
 
+    void loop_until_se_queue_full();
+
     std::optional<SpikeEvent> spike_step();
+
     std::optional<SpikeEvent> create_spike_event(insn_fetch_t fetch);
 
+    // methods for TL channel
+    void receive_tl_req();
+
+    void return_tl_response();
+
+    void record_rf_access(CommitPeekInterface cmInterface);
+
+    int cnt;
 
 };
 

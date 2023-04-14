@@ -10,6 +10,9 @@ import org.chipsalliance.tilelink.bundle.{TLChannelA, TLChannelB, TLChannelC, TL
 
 class VerificationModule(dut:DUT) extends TapModule {
   val clockRate = 5
+  val latPeekCommit = 2
+  val latPokeTL = 1
+  val latPeekTL = 2
 
   val clock = IO(Output(Clock()))
   val reset = IO(Output(Bool()))
@@ -24,7 +27,6 @@ class VerificationModule(dut:DUT) extends TapModule {
   val tlEParam = TileLinkChannelEParameter(2)
 
   val tlbundle_a = Flipped(Decoupled(new TLChannelA(tlAParam)))
-  tlbundle_a.bits
 
   val tlportA = IO(Flipped(Decoupled(new TLChannelA(tlAParam))))
   val tlportB = IO(Decoupled(new TLChannelB(tlBParam)))
@@ -109,22 +111,77 @@ class VerificationModule(dut:DUT) extends TapModule {
   val dpiBasePeek = Module(new ExtModule with HasExtModuleInline {
     override val desiredName = "dpiBasePeek"
     val clock = IO(Input(Clock()))
-    val address = IO(Input(UInt(32.W)))
+    val address = IO(Input(UInt(39.W)))
     setInline(
       s"$desiredName.sv",
       s"""module $desiredName(
          |  input clock,
-         |  input [31:0] address
+         |  input [38:0] address
          |);
-         |  import "DPI-C" function void dpiBasePeek(input bit[31:0] address);
+         |  import "DPI-C" function void dpiBasePeek(input bit[38:0] address);
+         |
+         |  import "DPI-C" function void dpiRefillQueue();
          |
          |  always @ (negedge clock) $desiredName(address);
+         |
+         |  always @ (negedge clock) dpiRefillQueue();
          |endmodule
          |""".stripMargin
     )
   })
-  dpiBasePeek.address := tlportA.bits.address
+  dpiBasePeek.address := tap(dut.ldut.rocketTile.frontend.icache.module.io.req.bits.addr)
   dpiBasePeek.clock := clock
+
+  val dpiCommitPeek = Module(new ExtModule with HasExtModuleInline {
+    override val desiredName = "dpiCommitPeek"
+    val clock       = IO(Input(Clock()))
+    val rf_wen      = IO(Input(Bool()))
+    val rf_waddr    = IO(Input(UInt(32.W)))
+    val rf_wdata    = IO(Input(UInt(64.W)))
+    val wb_reg_pc   = IO(Input(UInt(32.W)))
+    val wb_reg_inst = IO(Input(UInt(32.W)))
+    val wb_valid    = IO(Input(Bool()))
+    setInline(
+      s"$desiredName.sv",
+      s"""module $desiredName(
+         |  input clock,
+         |  input rf_wen,
+         |  input wb_valid,
+         |  input [31:0] rf_waddr,
+         |  input [63:0] rf_wdata,
+         |  input [31:0] wb_reg_pc,
+         |  input [31:0] wb_reg_inst
+         |);
+         |  import "DPI-C" function void $desiredName(
+         |  input bit rf_wen,
+         |  input bit wb_valid,
+         |  input bit[31:0] rf_waddr,
+         |  input bit[63:0] rf_wdata,
+         |  input bit[31:0] wb_reg_pc,
+         |  input bit[31:0] wb_reg_inst
+         |  );
+         |  always @ (posedge clock) #($latPeekCommit) $desiredName(
+         |  rf_wen,
+         |  wb_valid,
+         |  rf_waddr,
+         |  rf_wdata,
+         |  wb_reg_pc,
+         |  wb_reg_inst
+         |  );
+         |
+         |endmodule
+         |""".stripMargin
+    )
+  })
+  //todo:use rf_ext_w0_en
+  dpiCommitPeek.rf_wen      := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_wen)
+  dpiCommitPeek.rf_waddr    := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_waddr)
+  dpiCommitPeek.rf_wdata    := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_wdata)
+  dpiCommitPeek.wb_reg_pc   := tap(dut.ldut.rocketTile.module.core.rocketImpl.wb_reg_pc)
+  dpiCommitPeek.wb_reg_inst := tap(dut.ldut.rocketTile.module.core.rocketImpl.wb_reg_inst)
+  dpiCommitPeek.wb_valid    := tap(dut.ldut.rocketTile.module.core.rocketImpl.wb_valid)
+  dpiCommitPeek.clock       := clock
+
 
   @instantiable
   class PeekTL(param_a: TileLinkChannelAParameter) extends ExtModule with HasExtModuleInline {
@@ -160,7 +217,7 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input bit a_valid,
          |  input bit d_ready
          |);
-         |always @ (posedge clock) $desiredName(
+         |always @ (posedge clock) #($latPeekTL) $desiredName(
          |  aBits_opcode,
          |  aBits_param,
          |  aBits_size,
@@ -213,7 +270,7 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  output bit a_ready,
          |  input bit d_ready
          |);
-         |always @ (posedge clock) #2 $desiredName(
+         |always @ (posedge clock) #($latPokeTL) $desiredName(
          |  dBits_opcode,
          |  dBits_param,
          |  dBits_size,
@@ -260,5 +317,7 @@ class VerificationModule(dut:DUT) extends TapModule {
   tlportB.bits.mask := 0.U
   tlportB.bits.data := 0.U
   tlportB.bits.corrupt := 0.U
+
+  done()
 
 }

@@ -125,7 +125,7 @@ void VBridgeImpl::run() {
   while (true) {
     loop_until_se_queue_full();
     while (to_rtl_queue.size() > 1) {
-      return_fetch_response();
+      return_tl_response();
 
       top.clock = 1;
       top.eval();
@@ -431,8 +431,7 @@ void VBridgeImpl::receive_tl_req() {
   }
 }
 
-
-void VBridgeImpl::return_fetch_response() {
+void VBridgeImpl::return_tl_response() {
 #define TL(name) (get_tl_##name(top))
   bool fetch_valid = false;
   bool aqu_valid = false;

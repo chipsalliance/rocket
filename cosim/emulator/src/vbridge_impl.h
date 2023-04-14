@@ -103,10 +103,8 @@ private:
   uint64_t get_t();
 
   // methods for TL channel
-  void return_tl_response();
   void receive_tl_req();
-  void return_fetch_response();
-  void return_acquire_response();
+  void return_tl_response();
   int cnt;
 
   void record_rf_access();
