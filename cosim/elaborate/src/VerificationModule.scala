@@ -190,10 +190,13 @@ class VerificationModule(dut:DUT) extends TapModule {
     @public val aBits: TLChannelA = IO(Input(new TLChannelA(param_a)))
     @public val aValid: Bool = IO(Input(Bool()))
     @public val dReady: Bool = IO(Input(Bool()))
+    @public val miss: Bool = IO(Input(Bool()))
+    @public val pc :UInt = IO(Input(UInt(32.W)))
     setInline(
       "dpiPeekTL.sv",
       s"""module $desiredName(
          |  input clock,
+         |  input bit[31:0] pc,
          |  input bit[${aBits.opcode.getWidth - 1}:0] aBits_opcode,
          |  input bit[${aBits.param.getWidth - 1}:0] aBits_param,
          |  input bit[${aBits.size.getWidth - 1}:0] aBits_size,
@@ -203,9 +206,11 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input bit[${aBits.data.getWidth - 1}:0] aBits_data,
          |  input bit aBits_corrupt,
          |  input bit aValid,
-         |  input bit dReady
+         |  input bit dReady,
+         |  input bit miss
          |);
          |import "DPI-C" function void $desiredName(
+         |  input bit[31:0] pc,
          |  input bit[${aBits.opcode.getWidth - 1}:0] a_opcode,
          |  input bit[${aBits.param.getWidth - 1}:0] a_param,
          |  input bit[${aBits.size.getWidth - 1}:0] a_size,
@@ -215,9 +220,11 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input bit[${aBits.data.getWidth - 1}:0] a_data,
          |  input bit a_corrupt,
          |  input bit a_valid,
-         |  input bit d_ready
+         |  input bit d_ready,
+         |  input miss
          |);
          |always @ (posedge clock) #($latPeekTL) $desiredName(
+         |  pc,
          |  aBits_opcode,
          |  aBits_param,
          |  aBits_size,
@@ -227,7 +234,8 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  aBits_data,
          |  aBits_corrupt,
          |  aValid,
-         |  dReady
+         |  dReady,
+         |  miss
          |);
          |endmodule
          |""".stripMargin
@@ -239,7 +247,6 @@ class VerificationModule(dut:DUT) extends TapModule {
     @public val clock = IO(Input(Clock()))
     @public val dBits: TLChannelD = IO(Output(new TLChannelD(param_d)))
     @public val dValid = IO(Output(Bool()))
-    @public val aReady = IO(Output(Bool()))
     @public val dReady = IO(Input(Bool()))
     setInline(
       s"$desiredName.sv",
@@ -254,7 +261,6 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
          |  output bit dBits_corrupt,
          |  output bit dValid,
-         |  output bit aReady,
          |  input bit dReady
          |);
          |import "DPI-C" function void $desiredName(
@@ -267,7 +273,6 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  output bit[${dBits.data.getWidth - 1}:0] d_data,
          |  output bit d_corrupt,
          |  output bit d_valid,
-         |  output bit a_ready,
          |  input bit d_ready
          |);
          |always @ (posedge clock) #($latPokeTL) $desiredName(
@@ -280,7 +285,6 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  dBits_data,
          |  dBits_corrupt,
          |  dValid,
-         |  aReady,
          |  dReady
          |);
          |endmodule
@@ -293,12 +297,13 @@ class VerificationModule(dut:DUT) extends TapModule {
   dpiPeekTL.aBits := tlportA.bits
   dpiPeekTL.aValid := tlportA.valid
   dpiPeekTL.dReady := tlportD.ready
+  dpiPeekTL.pc := tap(dut.ldut.rocketTile.module.core.rocketImpl.ex_reg_pc)
+  dpiPeekTL.miss := tap(dut.ldut.rocketTile.frontend.icache.module.s2_miss)
 
   val dpiPokeTL = Module(new PokeTL(tlDParam))
   dpiPokeTL.clock := clock
   tlportD.bits := dpiPokeTL.dBits
   tlportD.valid := dpiPokeTL.dValid
-  tlportA.ready := dpiPokeTL.aReady
   dpiPokeTL.dReady := tlportD.ready
 
 

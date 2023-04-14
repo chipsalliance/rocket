@@ -68,6 +68,7 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiPeekTL(
+    const svBitVecVal *pc,
     const svBitVecVal *a_opcode,
     const svBitVecVal *a_param,
     const svBitVecVal *a_size,
@@ -77,12 +78,14 @@ void VBridgeImpl::dpiDumpWave() {
     const svBitVecVal *a_data,
     svBit a_corrupt,
     svBit a_valid,
-    svBit d_ready
+    svBit d_ready,
+    svBit miss
 ) {
   TRY({
-        vbridge_impl_instance.dpiPeekTL(
-            TlPeekInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
-                            a_corrupt, a_valid, d_ready});
+        vbridge_impl_instance.dpiPeekTL(miss, *pc,
+                                        TlPeekInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask,
+                                                        *a_data,
+                                                        a_corrupt, a_valid, d_ready});
       })
 }
 
@@ -96,13 +99,12 @@ void VBridgeImpl::dpiDumpWave() {
     svBitVecVal *d_data,
     svBit *d_corrupt,
     svBit *d_valid,
-    svBit *a_ready,
     svBit d_ready
 ) {
   TRY({
         vbridge_impl_instance.dpiPokeTL(
             TlPokeInterface{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
-                            d_corrupt, d_valid, a_ready, d_ready});
+                            d_corrupt, d_valid, d_ready});
       })
 
 

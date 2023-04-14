@@ -59,7 +59,7 @@ public:
 
     void dpiPokeTL(const TlPokeInterface &tl_poke);
 
-    void dpiPeekTL(const TlPeekInterface &tl_peek);
+    void dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek);
 
     void dpiRefillQueue();
 
@@ -122,6 +122,10 @@ private:
     void record_rf_access(CommitPeekInterface cmInterface);
 
     int cnt;
+
+    int get_mem_req_cycles() {
+      return 1;
+    };
 
 };
 

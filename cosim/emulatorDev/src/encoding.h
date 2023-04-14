@@ -41,7 +41,6 @@ struct TlPokeInterface {
   svBitVecVal *d_bits_data;
   svBit *d_corrupt;
   svBit *d_valid;
-  svBit *a_ready;
 
   svBit d_ready;
 };
