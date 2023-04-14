@@ -13,7 +13,7 @@ namespace TlOpcode {
       AccessAck = 4;
 }
 
-struct TlInterface {
+struct TlPeekInterface {
   svBitVecVal a_bits_opcode;
   svBitVecVal a_bits_param;
   svBitVecVal a_bits_size;
@@ -26,7 +26,7 @@ struct TlInterface {
   svBit d_ready;
 };
 
-struct TlInterfacePoke {
+struct TlPokeInterface {
   svBitVecVal *d_bits_opcode;
   svBitVecVal *d_bits_param;
   svBitVecVal *d_bits_size;

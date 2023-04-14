@@ -10,30 +10,54 @@
 #include "simple_sim.h"
 #include "util.h"
 #include "encoding.h"
+#include "spike_event.h"
 
 #include <svdpi.h>
+
+class SpikeEvent;
+
+struct TLReqRecord {
+    uint64_t data;
+    uint32_t size_by_byte;
+    uint16_t source;
+
+    /// when opType set to nil, it means this record is already sent back
+    enum class opType {
+        Nil,
+        Get,
+        PutFullData
+    } op;
+    int remaining_cycles;
+
+    TLReqRecord(uint64_t data, uint32_t size_by_byte, uint16_t source, opType op, int cycles) : data(data), size_by_byte(size_by_byte), source(source), op(op), remaining_cycles(cycles){};
+};
+struct FetchRecord {
+    uint64_t data;
+    uint16_t source;
+    bool remaining;
+};
+struct AquireRecord {
+    uint64_t data;
+    uint16_t param;
+    uint16_t source;
+    bool remaining;
+};
 
 class VBridgeImpl {
 public:
     explicit VBridgeImpl();
 
     void dpiDumpWave();
-
     void dpiInitCosim();
-
-    void timeoutCheck();
+    void dpiPokeTL(const TlPokeInterface &tl_poke);
+    void dpiPeekTL(const TlPeekInterface &tl_peek);
 
     void init_spike();
 
-    uint64_t getCycle() {
-      return ctx->time();
-    }
-
     uint64_t get_t();
-
-    void dpiPokeTL(const TlInterfacePoke &tl_poke);
-
-    void dpiPeekTL(const TlInterface &tl_peek);
+    uint8_t load(uint64_t address);
+    void timeoutCheck();
+    uint64_t getCycle() {return ctx->time();}
 
 
 private:
@@ -44,7 +68,6 @@ private:
 
     // verilator context
     VerilatedContext *ctx;
-
     VerilatedFstC tfp;
 
     uint64_t _cycles;
@@ -61,9 +84,16 @@ private:
     const uint64_t reset_vector = std::stoul(get_env_arg("COSIM_reset_vector"), nullptr, 16);
 
 
-    /// RTL timeout cycles
-    /// note: this is not the real system cycles, scalar instructions is evaulated via spike, which is not recorded.
-//  const uint64_t timeout = std::stoul(get_env_arg("COSIM_timeout"));
+    //Spike
+    const size_t to_rtl_queue_size = 5;
+    std::list<SpikeEvent> to_rtl_queue;
+
+    std::map<reg_t, TLReqRecord> tl_banks;
+    FetchRecord fetch_banks[8];
+    AquireRecord aquire_banks[8];
+
+    std::optional<SpikeEvent> spike_step();
+    std::optional<SpikeEvent> create_spike_event(insn_fetch_t fetch);
 
 
 };

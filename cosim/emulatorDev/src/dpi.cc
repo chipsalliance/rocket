@@ -81,8 +81,8 @@ void VBridgeImpl::dpiDumpWave() {
 ) {
   TRY({
         vbridge_impl_instance.dpiPeekTL(
-            TlInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
-                        a_corrupt, a_valid, d_ready});
+            TlPeekInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
+                            a_corrupt, a_valid, d_ready});
       })
 }
 
@@ -101,7 +101,7 @@ void VBridgeImpl::dpiDumpWave() {
 ) {
   TRY({
         vbridge_impl_instance.dpiPokeTL(
-            TlInterfacePoke{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
+            TlPokeInterface{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
                             d_corrupt, d_valid, a_ready, d_ready});
       })
 
