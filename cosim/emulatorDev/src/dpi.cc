@@ -20,7 +20,6 @@ void sigint_handler(int s) {
 }
 
 
-
 #define TRY(action) \
   try {             \
     if (!terminated) {action}          \
@@ -35,31 +34,33 @@ void sigint_handler(int s) {
   }
 
 #if VM_TRACE
+
 void VBridgeImpl::dpiDumpWave() {
   TRY({
-    ::dpiDumpWave((wave + ".fst").c_str());
-  })
+        ::dpiDumpWave((wave + ".fst").c_str());
+      })
 }
+
 #endif
 
 [[maybe_unused]] void dpiInitCosim() {
   std::signal(SIGINT, sigint_handler);
   svSetScope(svGetScopeFromName("TOP.TestBench.verificationModule.verbatim"));
   TRY({
-    vbridge_impl_instance.dpiInitCosim();
-  })
+        vbridge_impl_instance.dpiInitCosim();
+      })
 }
 
 
 [[maybe_unused]] void dpiTimeoutCheck() {
   TRY({
-    vbridge_impl_instance.timeoutCheck();
-  })
+        vbridge_impl_instance.timeoutCheck();
+      })
 }
 
 [[maybe_unused]] void dpiBasePoke(svBitVecVal *resetVector) {
-    uint32_t v = 0x1000;
-    *resetVector = v;
+  uint32_t v = 0x1000;
+  *resetVector = v;
 }
 
 [[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
@@ -79,10 +80,10 @@ void VBridgeImpl::dpiDumpWave() {
     svBit d_ready
 ) {
   TRY({
-    vbridge_impl_instance.dpiPeekTL(
-        TlInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
-                     a_corrupt, a_valid, d_ready});
-  })
+        vbridge_impl_instance.dpiPeekTL(
+            TlInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask, *a_data,
+                        a_corrupt, a_valid, d_ready});
+      })
 }
 
 [[maybe_unused]] void dpiPokeTL(
@@ -99,13 +100,10 @@ void VBridgeImpl::dpiDumpWave() {
     svBit d_ready
 ) {
   TRY({
-    vbridge_impl_instance.dpiPokeTL(
-        TlInterfacePoke{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
-                         d_corrupt, d_valid, a_ready, d_ready});
-  })
-
-
-
+        vbridge_impl_instance.dpiPokeTL(
+            TlInterfacePoke{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
+                            d_corrupt, d_valid, a_ready, d_ready});
+      })
 
 
 }

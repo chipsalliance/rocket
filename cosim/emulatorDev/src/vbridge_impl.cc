@@ -45,7 +45,7 @@ void VBridgeImpl::timeoutCheck() {
 
 void VBridgeImpl::dpiInitCosim() {
   google::InitGoogleLogging("emulator");
-  FLAGS_logtostderr=true;
+  FLAGS_logtostderr = true;
 
   ctx = Verilated::threadContextp();
 
@@ -69,22 +69,22 @@ void VBridgeImpl::init_spike() {
 
 void VBridgeImpl::dpiPeekTL(const TlInterface &tl_peek) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
-  LOG(INFO) << fmt::format("DpiTLPeek address ={:08X}, valid = {}",tl_peek.a_bits_address,tl_peek.a_valid);
+  LOG(INFO) << fmt::format("DpiTLPeek address ={:08X}, valid = {}", tl_peek.a_bits_address, tl_peek.a_valid);
 
 }
 
 void VBridgeImpl::dpiPokeTL(const TlInterfacePoke &tl_poke) {
   VLOG(3) << fmt::format("[{}] dpiPokeTL", get_t());
-  *tl_poke.d_valid=0;
+  *tl_poke.d_valid = 0;
   *tl_poke.d_bits_param = 0;
-  *tl_poke.d_bits_size=0;
-  *tl_poke.d_bits_source=0;
-  *tl_poke.d_bits_sink=0;
-  *tl_poke.d_bits_denied=0;
-  *tl_poke.d_bits_data=0;
-  *tl_poke.d_corrupt=0;
-  *tl_poke.d_valid=0;
-  *tl_poke.a_ready=true;
+  *tl_poke.d_bits_size = 0;
+  *tl_poke.d_bits_source = 0;
+  *tl_poke.d_bits_sink = 0;
+  *tl_poke.d_bits_denied = 0;
+  *tl_poke.d_bits_data = 0;
+  *tl_poke.d_corrupt = 0;
+  *tl_poke.d_valid = 0;
+  *tl_poke.a_ready = true;
 }
 
 VBridgeImpl vbridge_impl_instance;
