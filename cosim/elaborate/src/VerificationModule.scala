@@ -23,7 +23,7 @@ class VerificationModule(dut:DUT) extends TapModule {
   val tlAParam = TileLinkChannelAParameter(32, 2, 64, 3)
   val tlBParam = TileLinkChannelBParameter(32, 2, 64, 3)
   val tlCParam = TileLinkChannelCParameter(32, 2, 64, 3)
-  val tlDParam = TileLinkChannelDParameter(32, 2, 64, 2)
+  val tlDParam = TileLinkChannelDParameter(32, 2, 64, 3)
   val tlEParam = TileLinkChannelEParameter(2)
 
   val tlbundle_a = Flipped(Decoupled(new TLChannelA(tlAParam)))
@@ -121,6 +121,8 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  import "DPI-C" function void dpiBasePeek(input bit[38:0] address);
          |
          |  import "DPI-C" function void dpiRefillQueue();
+         |
+         |  initial dpiRefillQueue();
          |
          |  always @ (negedge clock) $desiredName(address);
          |
@@ -263,26 +265,32 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  output bit dValid,
          |  input bit dReady
          |);
+         |  bit[31:0] data_high,data_low;
+         |  assign dBits_data[63:32] = data_high;
+         |  assign dBits_data[31:0] = data_low;
+         |
          |import "DPI-C" function void $desiredName(
+         |  output bit[31:0] data_high,
+         |  output bit[31:0] data_low,
          |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
          |  output bit[${dBits.param.getWidth - 1}:0] d_param,
          |  output bit[${dBits.size.getWidth - 1}:0] d_size,
          |  output bit[${dBits.source.getWidth - 1}:0] d_source,
          |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
          |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
-         |  output bit[${dBits.data.getWidth - 1}:0] d_data,
          |  output bit d_corrupt,
          |  output bit d_valid,
          |  input bit d_ready
          |);
          |always @ (posedge clock) #($latPokeTL) $desiredName(
+         |  data_high,
+         |  data_low,
          |  dBits_opcode,
          |  dBits_param,
          |  dBits_size,
          |  dBits_source,
          |  dBits_sink,
          |  dBits_denied,
-         |  dBits_data,
          |  dBits_corrupt,
          |  dValid,
          |  dReady

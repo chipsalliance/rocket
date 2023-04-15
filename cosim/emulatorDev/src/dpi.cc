@@ -64,7 +64,7 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
-  LOG(INFO) << fmt::format("DpiBasePeek value ={:08X}", *address);
+//  LOG(INFO) << fmt::format("DpiBasePeek icache addr ={:08X}", *address);
 }
 
 [[maybe_unused]] void dpiPeekTL(
@@ -90,20 +90,21 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiPokeTL(
+    svBitVecVal *d_bits_data_high,
+    svBitVecVal *d_bits_data_low,
     svBitVecVal *d_opcode,
     svBitVecVal *d_param,
     svBitVecVal *d_size,
     svBitVecVal *d_source,
     svBitVecVal *d_sink,
     svBitVecVal *d_denied,
-    svBitVecVal *d_data,
     svBit *d_corrupt,
     svBit *d_valid,
     svBit d_ready
 ) {
   TRY({
         vbridge_impl_instance.dpiPokeTL(
-            TlPokeInterface{d_opcode, d_param, d_size, d_source, d_sink, d_denied, d_data,
+            TlPokeInterface{d_bits_data_high,d_bits_data_low,d_opcode, d_param, d_size, d_source, d_sink, d_denied,
                             d_corrupt, d_valid, d_ready});
       })
 

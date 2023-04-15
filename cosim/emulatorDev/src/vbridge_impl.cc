@@ -122,7 +122,7 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 }
 
 void VBridgeImpl::timeoutCheck() {
-  if (get_t() > 1000) {
+  if (get_t() > 10000) {
     LOG(FATAL_S) << fmt::format("Simulation timeout, t={}", get_t());
   }
 }
@@ -145,7 +145,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
   int valid = tl_peek.a_valid;
-  LOG(INFO) << fmt::format("dpiPeekTL working ");
+//  LOG(INFO) << fmt::format("dpiPeekTL: wb_pc={:08X}",pc);
   if (!valid) return;
   // store A channel req
   uint8_t opcode = tl_peek.a_bits_opcode;
@@ -155,8 +155,10 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
   uint8_t param = tl_peek.a_bits_param;
   // find icache refill request, fill fetch_banks
   if (miss) {
+
     switch (opcode) {
       case TlOpcode::Get: {
+//        LOG(INFO) << fmt::format("Into miss get");
         for (int i = 0; i < 8; i++) {
           uint64_t insn = 0;
           for (int j = 0; j < 8; ++j) {
@@ -165,6 +167,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
           fetch_banks[i].data = insn;
           fetch_banks[i].source = src;
           fetch_banks[i].remaining = true;
+//          LOG(INFO) << fmt::format("Log instn:{:08X}",insn);
         }
         return;
       }
@@ -273,7 +276,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
 void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   VLOG(3) << fmt::format("[{}] dpiPokeTL", get_t());
-  LOG(INFO) << fmt::format("dpiPokeTL working ");
+//  LOG(INFO) << fmt::format("dpiPokeTL working ");
 
   bool fetch_valid = false;
   bool aqu_valid = false;
@@ -282,12 +285,15 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   uint16_t param = 0;
   for (auto &fetch_bank: fetch_banks) {
     if (fetch_bank.remaining) {
+
       fetch_bank.remaining = false;
       *tl_poke.d_bits_opcode = 1;
-      *tl_poke.d_bits_data = fetch_bank.data;
+      *tl_poke.d_bits_data_high = fetch_bank.data >> 32;
+      *tl_poke.d_bits_data_low = fetch_bank.data;
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
+//      LOG(INFO) << fmt::format("Poke fetch instn1:{:08X},instn1:{:08X}",*tl_poke.d_bits_data_high,*tl_poke.d_bits_data_low);
       break;
     }
   }
@@ -298,9 +304,11 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       break;
     }
     if (aquire_bank.remaining) {
+      LOG(INFO) << fmt::format("Poke aquire instn:{:08X}",aquire_bank.data);
       aquire_bank.remaining = false;
       *tl_poke.d_bits_opcode = 5;
-      *tl_poke.d_bits_data = aquire_bank.data;
+      *tl_poke.d_bits_data_low = aquire_bank.data;
+      *tl_poke.d_bits_data_high = aquire_bank.data >> 32;
       *tl_poke.d_bits_param = 0;
       source = aquire_bank.source;
       size = 6;
@@ -311,6 +319,9 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   *tl_poke.d_bits_source = source;
   *tl_poke.d_bits_size = size;
   *tl_poke.d_valid = fetch_valid | aqu_valid;
+  *tl_poke.d_corrupt = 0;
+  *tl_poke.d_bits_sink = 0;
+  *tl_poke.d_bits_denied =0;
 
 
 }
@@ -320,8 +331,9 @@ void VBridgeImpl::dpiRefillQueue() {
 }
 
 void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
-  LOG(INFO) << fmt::format("dpiCommitPeek: wb_valid= {},rf_wen={} ", cmInterface.wb_valid, cmInterface.rf_wen);
+
   if (cmInterface.wb_valid == 0) return;
+  LOG(INFO) << fmt::format("dpiCommitPeek: wb_valid= {},rf_wen={} ", cmInterface.wb_valid, cmInterface.rf_wen);
 
 
   uint64_t pc = cmInterface.wb_reg_pc;

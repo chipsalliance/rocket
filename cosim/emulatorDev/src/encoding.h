@@ -32,13 +32,14 @@ struct TlPeekStatusInterface {
 };
 
 struct TlPokeInterface {
+  svBitVecVal *d_bits_data_high;
+  svBitVecVal *d_bits_data_low;
   svBitVecVal *d_bits_opcode;
   svBitVecVal *d_bits_param;
   svBitVecVal *d_bits_size;
   svBitVecVal *d_bits_source;
   svBitVecVal *d_bits_sink;
   svBitVecVal *d_bits_denied;
-  svBitVecVal *d_bits_data;
   svBit *d_corrupt;
   svBit *d_valid;
 
