@@ -51,7 +51,8 @@ struct CommitPeekInterface {
   svBit rf_wen;
   svBit wb_valid;
   svBitVecVal rf_waddr;
-  svBitVecVal rf_wdata;
+  svBitVecVal rf_wdata_high;
+  svBitVecVal rf_wdata_low;
   svBitVecVal wb_reg_pc;
   svBitVecVal wb_reg_inst;
 };

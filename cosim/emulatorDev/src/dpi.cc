@@ -125,7 +125,8 @@ void VBridgeImpl::dpiDumpWave() {
     svBit rf_wen,
     svBit wb_valid,
     const svBitVecVal *rf_waddr,
-    const svBitVecVal *rf_wdata,
+    const svBitVecVal *rf_wdata_high,
+    const svBitVecVal *rf_wdata_low,
     const svBitVecVal *wb_reg_pc,
     const svBitVecVal *wb_reg_inst
 ) {
@@ -134,7 +135,8 @@ void VBridgeImpl::dpiDumpWave() {
             rf_wen,
             wb_valid,
             *rf_waddr,
-            *rf_wdata,
+            *rf_wdata_high,
+            *rf_wdata_low,
             *wb_reg_pc,
             *wb_reg_inst
         });

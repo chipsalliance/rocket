@@ -333,14 +333,14 @@ void VBridgeImpl::dpiRefillQueue() {
 void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 
   if (cmInterface.wb_valid == 0) return;
-  LOG(INFO) << fmt::format("dpiCommitPeek: wb_valid= {},rf_wen={} ", cmInterface.wb_valid, cmInterface.rf_wen);
+  LOG(INFO) << fmt::format("dpiCommitPeek: pc={:08X}, wb_valid= {},rf_wen={} ", cmInterface.wb_reg_pc,cmInterface.wb_valid, cmInterface.rf_wen);
 
 
   uint64_t pc = cmInterface.wb_reg_pc;
   LOG(INFO) << fmt::format("RTL write back insn {:08X} ", pc);
   // Check rf write
   // todo: use rf_valid
-  if (cmInterface.rf_wen) {
+  if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
   }
   // commit spike event
@@ -377,9 +377,14 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // peek rtl rf access
   uint32_t waddr = cmInterface.rf_waddr;
-  uint64_t wdata = cmInterface.rf_wdata;
+  uint64_t wdata_low = cmInterface.rf_wdata_low;
+  uint64_t wdata_high = cmInterface.rf_wdata_high;
+  uint64_t wdata = wdata_low + (wdata_high<<32);
+
   uint64_t pc = cmInterface.wb_reg_pc;
   uint64_t insn = cmInterface.wb_reg_inst;
+
+  // LOG(INFO) << fmt::format("RTL wirte wdata = {:08X}, wdata_high = {:08X},wdata_low = {:08X}", wdata, cmInterface.rf_wdata_high, cmInterface.rf_wdata_low);
 
   uint8_t opcode = clip(insn, 0, 6);
   bool rtl_csr = opcode == 0b1110011;
@@ -402,8 +407,9 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
                                  se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits,
                                  se_iter->is_committed);
       }
+
       LOG(FATAL)
-          << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , insn={:08X}, waddr={:08X}", pc, insn, waddr);
+          << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , insn={:08X}, waddr=Reg({})", pc, insn, waddr);
     }
     // start to check RTL rf_write with spike event
     // for non-store ins. check rf write

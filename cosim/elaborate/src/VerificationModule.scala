@@ -154,11 +154,17 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input [31:0] wb_reg_pc,
          |  input [31:0] wb_reg_inst
          |);
+         |
+         |  bit[31:0] rf_wdata_high, rf_wdata_low;
+         |  assign rf_wdata_high = rf_wdata[63:32];
+         |  assign rf_wdata_low  = rf_wdata[31:0];
+         |
          |  import "DPI-C" function void $desiredName(
          |  input bit rf_wen,
          |  input bit wb_valid,
          |  input bit[31:0] rf_waddr,
-         |  input bit[63:0] rf_wdata,
+         |  input bit[31:0] rf_wdata_high,
+         |  input bit[31:0] rf_wdata_low,
          |  input bit[31:0] wb_reg_pc,
          |  input bit[31:0] wb_reg_inst
          |  );
@@ -166,7 +172,8 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  rf_wen,
          |  wb_valid,
          |  rf_waddr,
-         |  rf_wdata,
+         |  rf_wdata_high,
+         |  rf_wdata_low,
          |  wb_reg_pc,
          |  wb_reg_inst
          |  );
