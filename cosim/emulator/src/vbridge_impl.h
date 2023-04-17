@@ -4,111 +4,129 @@
 #include <queue>
 
 #include "mmu.h"
-
-#include "VV.h"
-#include "VV___024root.h"
+#include <VTestBench__Dpi.h>
 #include "verilated_fst_c.h"
 
 #include "simple_sim.h"
+#include "util.h"
+#include "encoding.h"
 #include "spike_event.h"
-#include "vbridge_config.h"
 
+#include <svdpi.h>
 
 class SpikeEvent;
 
 struct TLReqRecord {
-  uint64_t data;
-  uint32_t size_by_byte;
-  uint16_t source;
+    uint64_t data;
+    uint32_t size_by_byte;
+    uint16_t source;
 
-  /// when opType set to nil, it means this record is already sent back
-  enum class opType {
-    Nil,
-    Get,
-    PutFullData
-  } op;
-  int remaining_cycles;
+    /// when opType set to nil, it means this record is already sent back
+    enum class opType {
+        Nil,
+        Get,
+        PutFullData
+    } op;
+    int remaining_cycles;
 
-  TLReqRecord(uint64_t data, uint32_t size_by_byte, uint16_t source, opType op, int cycles) : data(data), size_by_byte(size_by_byte), source(source), op(op), remaining_cycles(cycles){};
+    TLReqRecord(uint64_t data, uint32_t size_by_byte, uint16_t source, opType op, int cycles) : data(data),
+                                                                                                size_by_byte(
+                                                                                                    size_by_byte),
+                                                                                                source(source), op(op),
+                                                                                                remaining_cycles(
+                                                                                                    cycles) {};
 };
+
 struct FetchRecord {
-  uint64_t data;
-  uint16_t source;
-  bool remaining;
+    uint64_t data;
+    uint16_t source;
+    bool remaining;
 };
 struct AquireRecord {
-  uint64_t data;
-  uint16_t param;
-  uint16_t source;
-  bool remaining;
+    uint64_t data;
+    uint16_t param;
+    uint16_t source;
+    bool remaining;
 };
-
 
 class VBridgeImpl {
 public:
-  explicit VBridgeImpl();
+    explicit VBridgeImpl();
 
-  ~VBridgeImpl();
+    void dpiDumpWave();
 
-  void setup(const std::string &bin, const std::string &ebin, const std::string &wave, uint64_t reset_vector, uint64_t cycles);
-  // todo remove this.
-  void configure_simulator(int argc, char **argv);
+    void dpiInitCosim();
 
-  void run();
+    void dpiPokeTL(const TlPokeInterface &tl_poke);
 
-  uint8_t load(uint64_t address);
+    void dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek);
+
+    void dpiRefillQueue();
+
+    void dpiCommitPeek(CommitPeekInterface cmInterface);
+
+    void init_spike();
+
+    uint64_t get_t();
+
+    uint8_t load(uint64_t address);
+
+    int timeoutCheck();
+
+    uint64_t getCycle() { return ctx->time(); }
+
 
 private:
-  // verilator context
-  VerilatedContext ctx;
-  VV top;
-  VerilatedFstC tfp;
-  // mem
-  simple_sim sim;
-  // to init spike
-  isa_parser_t isa;
-  processor_t proc;
-  // parameter used in verilator
-  uint64_t _cycles;
-  // file path of executeable binary file, which will be executed.
-  std::string bin;
-  // file path of entrance binary file
-  std::string ebin;
-  // generated waveform path.
-  std::string wave;
-  // reset vector
-  uint64_t reset_vector{};
-  // RTL timeout cycles
-  // note: this is not the real system cycles, scalar instructions is evaulated via spike, which is not recorded.
-  uint64_t timeout{};
 
-  // spike
-  const size_t to_rtl_queue_size = 5;
-  std::list<SpikeEvent> to_rtl_queue;
+    simple_sim sim;
+    isa_parser_t isa;
+    processor_t proc;
 
-  std::map<reg_t, TLReqRecord> tl_banks;
-  FetchRecord fetch_banks[8];
-  AquireRecord aquire_banks[8];
+    // verilator context
+    VerilatedContext *ctx;
+    VerilatedFstC tfp;
 
-  inline void reset();
+    uint64_t _cycles;
 
-  void init_spike();
-  void loop_until_se_queue_full();
-  std::optional<SpikeEvent> spike_step();
-  std::optional<SpikeEvent> create_spike_event(insn_fetch_t fetch);
-  SpikeEvent *find_se_to_issue();
+    /// file path of executable binary file, which will be executed.
+    const std::string bin = get_env_arg("COSIM_bin");
 
-  void init_simulator();
-  void terminate_simulator();
-  uint64_t get_t();
+    const std::string ebin = get_env_arg("COSIM_entrance_bin");
 
-  // methods for TL channel
-  void receive_tl_req();
-  void return_tl_response();
-  int cnt;
+    /// generated waveform path.
+    const std::string wave = get_env_arg("COSIM_wave");
 
-  void record_rf_access();
-  int get_mem_req_cycles() {
-    return 1;
-  };
+    /// reset vector of
+    const uint64_t reset_vector = std::stoul(get_env_arg("COSIM_reset_vector"), nullptr, 16);
+
+
+    //Spike
+    const size_t to_rtl_queue_size = 10;
+    std::list<SpikeEvent> to_rtl_queue;
+
+    std::map<reg_t, TLReqRecord> tl_banks;
+    FetchRecord fetch_banks[8];
+    AquireRecord aquire_banks[8];
+
+    void loop_until_se_queue_full();
+
+    std::optional<SpikeEvent> spike_step();
+
+    std::optional<SpikeEvent> create_spike_event(insn_fetch_t fetch);
+
+    // methods for TL channel
+    void receive_tl_req();
+
+    void return_tl_response();
+
+    void record_rf_access(CommitPeekInterface cmInterface);
+
+    int cnt;
+
+    int get_mem_req_cycles() {
+      return 1;
+    };
+
 };
+
+extern VBridgeImpl vbridge_impl_instance;

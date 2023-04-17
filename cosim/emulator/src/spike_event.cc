@@ -5,11 +5,11 @@
 #include "exceptions.h"
 #include "glog_exception_safe.h"
 #include "spike_event.h"
-#include "tl_interface.h"
 #include "util.h"
 
 std::string SpikeEvent::describe_insn() const {
-  return fmt::format("pc={:08X}, bits={:08X}, disasm='{}'", pc, inst_bits, proc.get_disassembler()->disassemble(inst_bits));
+  return fmt::format("pc={:08X}, bits={:08X}, disasm='{}'", pc, inst_bits,
+                     proc.get_disassembler()->disassemble(inst_bits));
 }
 
 void SpikeEvent::pre_log_arch_changes() {
@@ -48,7 +48,8 @@ void SpikeEvent::log_arch_changes() {
       if (rd_new_bits != rd_should_be_bits) {
         rd_new_bits = rd_should_be_bits;
         is_rd_written = true;
-        LOG(INFO) << fmt::format("Log Spike {:08X} with scalar rf change: x[{}] from {:08X} to {:08X}", pc, rd_idx, rd_old_bits, rd_new_bits);
+        LOG(INFO) << fmt::format("Log Spike {:08X} with scalar rf change: x[{}] from {:08X} to {:08X}", pc, rd_idx,
+                                 rd_old_bits, rd_new_bits);
       }
     }
   }
@@ -61,7 +62,8 @@ void SpikeEvent::log_arch_changes() {
     uint64_t value = std::get<1>(mem_write);
     // Byte size_bytes
     uint8_t size_by_byte = std::get<2>(mem_write);
-    LOG(INFO) << fmt::format("spike detect mem write {:08X} on mem:{:08X} with size={}byte", value, address, size_by_byte);
+    LOG(INFO)
+        << fmt::format("spike detect mem write {:08X} on mem:{:08X} with size={}byte", value, address, size_by_byte);
     mem_access_record.all_writes[address] = {.size_by_byte = size_by_byte, .val = value};
   }
   // since log_mem_read doesn't record mem data, we need to load manually
@@ -77,7 +79,8 @@ void SpikeEvent::log_arch_changes() {
     for (int i = 0; i < size_by_byte; ++i) {
       value += (uint64_t) impl->load(address + i) << (i * 8);
     }
-    LOG(INFO) << fmt::format("spike detect mem read {:08X} on mem:{:08X} with size={}byte", value, address, size_by_byte);
+    LOG(INFO)
+        << fmt::format("spike detect mem read {:08X} on mem:{:08X} with size={}byte", value, address, size_by_byte);
     mem_access_record.all_reads[address] = {.size_by_byte = size_by_byte, .val = value};
   }
 
@@ -214,7 +217,8 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
               LOG(FATAL) << fmt::format("unknown compress func3");
           }
 
-        } else if (func3 == 4 && (((inst_bits & 0x1000) >> 12) == 1) && (fetch.insn.rvc_rs1() != 0) && (fetch.insn.rvc_rs2() == 0)) {
+        } else if (func3 == 4 && (((inst_bits & 0x1000) >> 12) == 1) && (fetch.insn.rvc_rs1() != 0) &&
+                   (fetch.insn.rvc_rs2() == 0)) {
           // C.JALR
           LOG(INFO) << fmt::format("find C.JALR");
           rd_idx = 1;// write x2
