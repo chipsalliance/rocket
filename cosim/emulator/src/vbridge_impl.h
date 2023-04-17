@@ -121,7 +121,9 @@ private:
 
     void record_rf_access(CommitPeekInterface cmInterface);
 
-    int cnt;
+    int beforeReturnAquire;
+
+    int afterReturnAquire;
 
     int get_mem_req_cycles() {
       return 1;

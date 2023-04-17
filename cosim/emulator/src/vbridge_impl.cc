@@ -168,20 +168,20 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
         return;
       }
         // fetch
-      case TlOpcode::AcquireBlock: {
-        cnt = 1;
-        LOG(INFO) << fmt::format("acquire fetch  here ");
-        for (int i = 0; i < 8; i++) {
-          uint64_t data = 0;
-          for (int j = 0; j < 8; ++j) {
-            data += (uint64_t) load(addr + j + i * 8) << (j * 8);
-          }
-          aquire_banks[i].data = data;
-          aquire_banks[i].param = param;
-          aquire_banks[i].source = src;
-          aquire_banks[i].remaining = true;
-        }
-      }
+//      case TlOpcode::AcquireBlock: {
+//        cnt = 1;
+//        LOG(INFO) << fmt::format("acquire fetch  here ");
+//        for (int i = 0; i < 8; i++) {
+//          uint64_t data = 0;
+//          for (int j = 0; j < 8; ++j) {
+//            data += (uint64_t) load(addr + j + i * 8) << (j * 8);
+//          }
+//          aquire_banks[i].data = data;
+//          aquire_banks[i].param = param;
+//          aquire_banks[i].source = src;
+//          aquire_banks[i].remaining = true;
+//        }
+//      }
       default:
         LOG(FATAL) << fmt::format("unknown tl opcode {}", opcode);
     }
@@ -191,7 +191,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (addr == se_iter->block.addr) {
       se = &(*se_iter);
-      LOG(INFO) << fmt::format("success find acqure Spike pc = {:08X}", se_iter->pc);
+      LOG(INFO) << fmt::format("find TileLink acquire from Spike pc = {:08X}", se_iter->pc);
       break;
     }
   }
@@ -249,13 +249,14 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
     }
 
     case TlOpcode::AcquireBlock: {
-      cnt = 1;
+      beforeReturnAquire = 1;
       LOG(INFO) << fmt::format("Find AcquireBlock for mem = {:08X}", addr);
       for (int i = 0; i < 8; i++) {
         uint64_t data = 0;
         for (int j = 0; j < 8; ++j) {
           data += (uint64_t) load(addr + j + i * 8) << (j * 8);
         }
+//        LOG(INFO) << fmt::format("record bank[{}] for data = {:08X}", i, se->block.blocks[i]);
         aquire_banks[i].data = se->block.blocks[i];
         aquire_banks[i].param = param;
         aquire_banks[i].source = src;
@@ -263,11 +264,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
       }
       break;
     }
-
-
   }
-
-
 }
 
 void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
@@ -278,12 +275,15 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   uint16_t source = 0;
   uint16_t param = 0;
   for (auto &fetch_bank: fetch_banks) {
+    if (afterReturnAquire) {
+      afterReturnAquire = 0;
+      break;
+    }
     if (fetch_bank.remaining) {
-
       fetch_bank.remaining = false;
       *tl_poke.d_bits_opcode = 1;
       *tl_poke.d_bits_data_high = fetch_bank.data >> 32;
-      *tl_poke.d_bits_data_low = fetch_bank.data;
+      *tl_poke.d_bits_data_low  = fetch_bank.data;
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
@@ -292,11 +292,12 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   }
   // todo: source for acquire?
   for (auto &aquire_bank: aquire_banks) {
-    if (cnt) {
-      cnt = 0;
+    if (beforeReturnAquire) {
+      beforeReturnAquire = 0;
       break;
     }
     if (aquire_bank.remaining) {
+//      LOG(INFO) << fmt::format("poke, time ={} ", get_t());
       aquire_bank.remaining = false;
       *tl_poke.d_bits_opcode = 5;
       *tl_poke.d_bits_data_low = aquire_bank.data;
@@ -305,21 +306,20 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       source = aquire_bank.source;
       size = 6;
       aqu_valid = true;
+      afterReturnAquire = 1;
+      break;
     }
   }
-  output:
   *tl_poke.d_bits_source = source;
   *tl_poke.d_bits_size = size;
   *tl_poke.d_valid = fetch_valid | aqu_valid;
   *tl_poke.d_corrupt = 0;
   *tl_poke.d_bits_sink = 0;
   *tl_poke.d_bits_denied = 0;
-
-
 }
 
 void VBridgeImpl::dpiRefillQueue() {
-  if (to_rtl_queue.size() < 3) loop_until_se_queue_full();
+  if (to_rtl_queue.size() < 2) loop_until_se_queue_full();
 }
 
 // enter -> check rf write -> commit se -> pop se
@@ -333,7 +333,6 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
   if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
   }
-
   // set this spike event as committed
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (se_iter->pc == pc) {
@@ -359,8 +358,6 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
       to_rtl_queue.pop_back();
     }
   }
-
-
 }
 
 void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
@@ -399,7 +396,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     }
     // start to check RTL rf_write with spike event
     // for non-store ins. check rf write
-    // todo: why exclude store insn? store insn shouldn't write regfile.
+    // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
     if (!(se->is_store)) {
       CHECK_EQ_S(wdata, se->rd_new_bits)
         << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
