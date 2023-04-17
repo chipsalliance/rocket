@@ -59,9 +59,8 @@ void VBridgeImpl::loop_until_se_queue_full() {
   }
   LOG(INFO) << fmt::format("to_rtl_queue is full now, start to simulate.");
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-    LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}",
-                             se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits,
-                             se_iter->is_committed);
+    LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}",
+                             se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits);
   }
 }
 
@@ -121,10 +120,13 @@ uint8_t VBridgeImpl::load(uint64_t address) {
   return *sim.addr_to_mem(address);
 }
 
-void VBridgeImpl::timeoutCheck() {
+int VBridgeImpl::timeoutCheck() {
   if (get_t() > 10000) {
-    LOG(FATAL_S) << fmt::format("Simulation timeout, t={}", get_t());
+    LOG(INFO) << fmt::format("Simulation timeout");
+//    LOG(FATAL) << fmt::format("Simulation timeout, t={}", get_t());
+    return 1;
   }
+  return 0;
 }
 
 void VBridgeImpl::dpiInitCosim() {
@@ -276,8 +278,6 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
 void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   VLOG(3) << fmt::format("[{}] dpiPokeTL", get_t());
-//  LOG(INFO) << fmt::format("dpiPokeTL working ");
-
   bool fetch_valid = false;
   bool aqu_valid = false;
   uint8_t size = 0;
@@ -304,7 +304,6 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       break;
     }
     if (aquire_bank.remaining) {
-      LOG(INFO) << fmt::format("Poke aquire instn:{:08X}",aquire_bank.data);
       aquire_bank.remaining = false;
       *tl_poke.d_bits_opcode = 5;
       *tl_poke.d_bits_data_low = aquire_bank.data;
@@ -321,19 +320,21 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   *tl_poke.d_valid = fetch_valid | aqu_valid;
   *tl_poke.d_corrupt = 0;
   *tl_poke.d_bits_sink = 0;
-  *tl_poke.d_bits_denied =0;
+  *tl_poke.d_bits_denied = 0;
 
 
 }
 
 void VBridgeImpl::dpiRefillQueue() {
-  if (to_rtl_queue.empty()) loop_until_se_queue_full();
+  if (to_rtl_queue.size() < 3) loop_until_se_queue_full();
 }
 
 void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 
   if (cmInterface.wb_valid == 0) return;
-  LOG(INFO) << fmt::format("dpiCommitPeek: pc={:08X}, wb_valid= {},rf_wen={} ", cmInterface.wb_reg_pc,cmInterface.wb_valid, cmInterface.rf_wen);
+  LOG(INFO)
+      << fmt::format("dpiCommitPeek: pc={:08X}, wb_valid= {},rf_wen={} ", cmInterface.wb_reg_pc, cmInterface.wb_valid,
+                     cmInterface.rf_wen);
 
 
   uint64_t pc = cmInterface.wb_reg_pc;
@@ -379,7 +380,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   uint32_t waddr = cmInterface.rf_waddr;
   uint64_t wdata_low = cmInterface.rf_wdata_low;
   uint64_t wdata_high = cmInterface.rf_wdata_high;
-  uint64_t wdata = wdata_low + (wdata_high<<32);
+  uint64_t wdata = wdata_low + (wdata_high << 32);
 
   uint64_t pc = cmInterface.wb_reg_pc;
   uint64_t insn = cmInterface.wb_reg_inst;

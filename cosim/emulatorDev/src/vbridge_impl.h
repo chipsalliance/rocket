@@ -71,7 +71,7 @@ public:
 
     uint8_t load(uint64_t address);
 
-    void timeoutCheck();
+    int timeoutCheck();
 
     uint64_t getCycle() { return ctx->time(); }
 

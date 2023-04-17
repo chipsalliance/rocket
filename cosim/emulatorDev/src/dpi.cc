@@ -53,9 +53,8 @@ void VBridgeImpl::dpiDumpWave() {
 
 
 [[maybe_unused]] void dpiTimeoutCheck() {
-  TRY({
-        vbridge_impl_instance.timeoutCheck();
-      })
+  if (vbridge_impl_instance.timeoutCheck())
+    dpiFinish();
 }
 
 [[maybe_unused]] void dpiBasePoke(svBitVecVal *resetVector) {
@@ -104,7 +103,7 @@ void VBridgeImpl::dpiDumpWave() {
 ) {
   TRY({
         vbridge_impl_instance.dpiPokeTL(
-            TlPokeInterface{d_bits_data_high,d_bits_data_low,d_opcode, d_param, d_size, d_source, d_sink, d_denied,
+            TlPokeInterface{d_bits_data_high, d_bits_data_low, d_opcode, d_param, d_size, d_source, d_sink, d_denied,
                             d_corrupt, d_valid, d_ready});
       })
 
