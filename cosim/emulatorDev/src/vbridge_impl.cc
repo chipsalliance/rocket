@@ -121,8 +121,8 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 }
 
 int VBridgeImpl::timeoutCheck() {
-  if (get_t() > 10000) {
-    LOG(INFO) << fmt::format("Simulation timeout");
+  if (get_t() > 100000) {
+    LOG(INFO) << fmt::format("Simulation timeout, time = {}", get_t());
     return 1;
   }
   return 0;
@@ -140,7 +140,6 @@ void VBridgeImpl::dpiInitCosim() {
 
   dpiDumpWave();
 }
-
 
 void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
@@ -324,24 +323,19 @@ void VBridgeImpl::dpiRefillQueue() {
   if (to_rtl_queue.size() < 3) loop_until_se_queue_full();
 }
 
+// enter -> check rf write -> commit se -> pop se
 void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 
   if (cmInterface.wb_valid == 0) return;
-  LOG(INFO)
-      << fmt::format("dpiCommitPeek: pc={:08X}, wb_valid= {},rf_wen={} ", cmInterface.wb_reg_pc, cmInterface.wb_valid,
-                     cmInterface.rf_wen);
-
-
+  bool haveCommittedSe = false;
   uint64_t pc = cmInterface.wb_reg_pc;
   LOG(INFO) << fmt::format("RTL write back insn {:08X} ", pc);
-  // Check rf write
-  // todo: use rf_valid
+  // Check rf write info
   if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
   }
-  // commit spike event
-  bool commit = false;
 
+  // set this spike event as committed
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (se_iter->pc == pc) {
       // mechanism to the insn which causes trap.
@@ -352,13 +346,13 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
           if (se_it->is_trap) se_it->is_committed = true;
         }
       }
-      commit = true;
       se_iter->is_committed = true;
+      haveCommittedSe = true;
       LOG(INFO) << fmt::format("Set spike {:08X} as committed", se_iter->pc);
       break;
     }
   }
-  if (!commit) LOG(INFO) << fmt::format("RTL wb without se in pc =  {:08X}", pc);
+  if (!haveCommittedSe) LOG(INFO) << fmt::format("RTL wb without se in pc =  {:08X}", pc);
   // pop the committed Event from the queue
   for (int i = 0; i < to_rtl_queue_size; i++) {
     if (to_rtl_queue.back().is_committed) {
