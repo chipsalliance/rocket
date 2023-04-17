@@ -7,7 +7,9 @@ namespace TlOpcode {
         AccessAckData = 1,
         PutFullData = 0,
         PutPartialData = 1,
-        AccessAck = 4;
+        AccessAck = 4,
+        Grant = 4,
+        GrantData = 5;
 }
 
 struct TlPeekInterface {

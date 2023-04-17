@@ -51,7 +51,6 @@ void VBridgeImpl::dpiDumpWave() {
       })
 }
 
-
 [[maybe_unused]] void dpiTimeoutCheck() {
   if (vbridge_impl_instance.timeoutCheck())
     dpiFinish();
@@ -60,10 +59,6 @@ void VBridgeImpl::dpiDumpWave() {
 [[maybe_unused]] void dpiBasePoke(svBitVecVal *resetVector) {
   uint32_t v = 0x1000;
   *resetVector = v;
-}
-
-[[maybe_unused]] void dpiBasePeek(const svBitVecVal *address) {
-//  LOG(INFO) << fmt::format("DpiBasePeek icache addr ={:08X}", *address);
 }
 
 [[maybe_unused]] void dpiPeekTL(

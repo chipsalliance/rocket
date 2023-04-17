@@ -98,7 +98,7 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input clock,
          |  output [31:0] resetVector
          |);
-         |  import "DPI-C" function void dpiBasePoke(output bit[31:0] resetVector);
+         |  import "DPI-C" function void $desiredName(output bit[31:0] resetVector);
          |
          |  always @ (posedge clock) $desiredName(resetVector);
          |endmodule
@@ -108,31 +108,24 @@ class VerificationModule(dut:DUT) extends TapModule {
   dpiBasePoke.clock := clock
   resetVector := dpiBasePoke.resetVector
 
-  val dpiBasePeek = Module(new ExtModule with HasExtModuleInline {
-    override val desiredName = "dpiBasePeek"
+  val dpiRefillQueue = Module(new ExtModule with HasExtModuleInline {
+    override val desiredName = "dpiRefillQueue"
     val clock = IO(Input(Clock()))
-    val address = IO(Input(UInt(39.W)))
     setInline(
       s"$desiredName.sv",
       s"""module $desiredName(
-         |  input clock,
-         |  input [38:0] address
+         |  input clock
          |);
-         |  import "DPI-C" function void dpiBasePeek(input bit[38:0] address);
+         |  import "DPI-C" function void $desiredName();
          |
-         |  import "DPI-C" function void dpiRefillQueue();
+         |  initial $desiredName();
          |
-         |  initial dpiRefillQueue();
-         |
-         |  always @ (negedge clock) $desiredName(address);
-         |
-         |  always @ (negedge clock) dpiRefillQueue();
+         |  always @ (negedge clock) $desiredName();
          |endmodule
          |""".stripMargin
     )
   })
-  dpiBasePeek.address := tap(dut.ldut.rocketTile.frontend.icache.module.io.req.bits.addr)
-  dpiBasePeek.clock := clock
+  dpiRefillQueue.clock := clock;
 
   val dpiCommitPeek = Module(new ExtModule with HasExtModuleInline {
     override val desiredName = "dpiCommitPeek"

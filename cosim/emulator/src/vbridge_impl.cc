@@ -121,7 +121,7 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 }
 
 int VBridgeImpl::timeoutCheck() {
-  if (get_t() > 100000) {
+  if (get_t() > 20000) {
     LOG(INFO) << fmt::format("Simulation timeout, time = {}", get_t());
     return 1;
   }
@@ -144,8 +144,7 @@ void VBridgeImpl::dpiInitCosim() {
 void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
-  int valid = tl_peek.a_valid;
-  if (!valid) return;
+  if (!tl_peek.a_valid) return;
   // store A channel req
   uint8_t opcode = tl_peek.a_bits_opcode;
   uint32_t addr = tl_peek.a_bits_address;
