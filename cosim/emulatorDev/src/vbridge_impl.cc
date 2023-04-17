@@ -123,7 +123,6 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 int VBridgeImpl::timeoutCheck() {
   if (get_t() > 10000) {
     LOG(INFO) << fmt::format("Simulation timeout");
-//    LOG(FATAL) << fmt::format("Simulation timeout, t={}", get_t());
     return 1;
   }
   return 0;
@@ -147,7 +146,6 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
   int valid = tl_peek.a_valid;
-//  LOG(INFO) << fmt::format("dpiPeekTL: wb_pc={:08X}",pc);
   if (!valid) return;
   // store A channel req
   uint8_t opcode = tl_peek.a_bits_opcode;
@@ -160,7 +158,6 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
     switch (opcode) {
       case TlOpcode::Get: {
-//        LOG(INFO) << fmt::format("Into miss get");
         for (int i = 0; i < 8; i++) {
           uint64_t insn = 0;
           for (int j = 0; j < 8; ++j) {
@@ -169,7 +166,6 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
           fetch_banks[i].data = insn;
           fetch_banks[i].source = src;
           fetch_banks[i].remaining = true;
-//          LOG(INFO) << fmt::format("Log instn:{:08X}",insn);
         }
         return;
       }
@@ -293,7 +289,6 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
-//      LOG(INFO) << fmt::format("Poke fetch instn1:{:08X},instn1:{:08X}",*tl_poke.d_bits_data_high,*tl_poke.d_bits_data_low);
       break;
     }
   }
@@ -385,8 +380,6 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   uint64_t pc = cmInterface.wb_reg_pc;
   uint64_t insn = cmInterface.wb_reg_inst;
 
-  // LOG(INFO) << fmt::format("RTL wirte wdata = {:08X}, wdata_high = {:08X},wdata_low = {:08X}", wdata, cmInterface.rf_wdata_high, cmInterface.rf_wdata_low);
-
   uint8_t opcode = clip(insn, 0, 6);
   bool rtl_csr = opcode == 0b1110011;
 
@@ -403,7 +396,6 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     }
     if (se == nullptr) {
       for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-        // LOG(INFO) << fmt::format("se pc = {:08X}, rd_idx = {:08X}",se_iter->pc,se_iter->rd_idx);
         LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}",
                                  se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits,
                                  se_iter->is_committed);
