@@ -9,7 +9,9 @@ namespace TlOpcode {
         PutPartialData = 1,
         AccessAck = 4,
         Grant = 4,
-        GrantData = 5;
+        GrantData = 5,
+        Release = 6 ,
+        ReleaseData = 7;
 }
 
 struct TlPeekInterface {
@@ -24,6 +26,18 @@ struct TlPeekInterface {
     svBit a_valid;
     svBit d_ready;
 };
+
+struct TlCInterface {
+    svBitVecVal c_bits_opcode;
+    svBitVecVal c_bits_param;
+    svBitVecVal c_bits_size;
+    svBitVecVal c_bits_source;
+    svBitVecVal c_bits_address;
+    svBitVecVal c_bits_data;
+    svBit c_corrupt;
+    svBit c_valid;
+};
+
 
 struct TlPeekStatusInterface {
     svBitVecVal pc;

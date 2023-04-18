@@ -19,18 +19,15 @@ inline uint32_t decode_size(uint32_t encoded_size) {
   return 1 << encoded_size;
 }
 
-VBridgeImpl::VBridgeImpl() : sim(1 << 30),
-                             isa("rv64gc", "msu"),
-                             _cycles(100),
-                             proc(
-                                 /*isa*/ &isa,
-                                 /*varch*/ fmt::format("").c_str(),
-                                 /*sim*/ &sim,
-                                 /*id*/ 0,
-                                 /*halt on reset*/ true,
-                                 /* endianness*/ memif_endianness_little,
-                                 /*log_file_t*/ nullptr,
-                                 /*sout*/ std::cerr) {
+VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa("rv64gc", "msu"), _cycles(100), proc(
+    /*isa*/ &isa,
+    /*varch*/ fmt::format("").c_str(),
+    /*sim*/ &sim,
+    /*id*/ 0,
+    /*halt on reset*/ true,
+    /* endianness*/ memif_endianness_little,
+    /*log_file_t*/ nullptr,
+    /*sout*/ std::cerr) {
 }
 
 void VBridgeImpl::init_spike() {
@@ -40,8 +37,8 @@ void VBridgeImpl::init_spike() {
   LOG(INFO) << fmt::format("Spike reset mstatus={:08X}", state->mstatus->read());
   // load binary to reset_vector
   sim.load(bin, ebin, reset_vector);
-  LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, wave={}, reset_vector={:#x}",
-                           bin, wave, reset_vector);
+  LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, wave={}, reset_vector={:#x}", bin, wave,
+                           reset_vector);
 }
 
 void VBridgeImpl::loop_until_se_queue_full() {
@@ -59,8 +56,9 @@ void VBridgeImpl::loop_until_se_queue_full() {
   }
   LOG(INFO) << fmt::format("to_rtl_queue is full now, start to simulate.");
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-    LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}",
-                             se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits);
+    LOG(INFO)
+        << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}", se_iter->pc, se_iter->rd_idx,
+                       se_iter->rd_old_bits, se_iter->rd_new_bits);
   }
 }
 
@@ -84,8 +82,8 @@ std::optional<SpikeEvent> VBridgeImpl::spike_step() {
     auto fetch = proc.get_mmu()->load_insn(state->pc);
     auto event = create_spike_event(fetch);
     auto &xr = proc.get_state()->XPR;
-    LOG(INFO) << fmt::format("Spike start to execute pc=[{:08X}] insn = {:08X} DISASM:{}",
-                             pc_before, fetch.insn.bits(), proc.get_disassembler()->disassemble(fetch.insn));
+    LOG(INFO) << fmt::format("Spike start to execute pc=[{:08X}] insn = {:08X} DISASM:{}", pc_before, fetch.insn.bits(),
+                             proc.get_disassembler()->disassemble(fetch.insn));
     auto &se = event.value();
     se.pre_log_arch_changes();
     proc.step(1);
@@ -141,10 +139,38 @@ void VBridgeImpl::dpiInitCosim() {
   dpiDumpWave();
 }
 
-void VBridgeImpl::dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek) {
+void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek, const TlCInterface &tl_c) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
-  if (!tl_peek.a_valid) return;
+  if (!tl_peek.a_valid && !tl_c.c_valid) return;
+  if (tl_c.c_valid) {
+    beforeReturnAquire = 1;
+    LOG(INFO) << fmt::format("Find C channel for mem = {:08X}", tl_c.c_bits_address);
+
+    // todo:
+    switch (tl_c.c_bits_opcode) {
+      case TlOpcode::Release: {
+        LOG(FATAL) << fmt::format("Find c release");
+
+      }
+      // todo: check release data
+      case TlOpcode::ReleaseData: {
+        aquire_banks[0].data = 0;
+        aquire_banks[0].param = tl_c.c_bits_param;
+        aquire_banks[0].source = tl_c.c_bits_source;
+        aquire_banks[0].remaining = true;
+        aquire_banks[0].is_releaseData = true;
+        return;
+      }
+
+      default:
+        LOG(FATAL) << fmt::format("unknown tl_c opcode {}", tl_c.c_bits_opcode);
+
+
+    }
+
+
+  }
   // store A channel req
   uint8_t opcode = tl_peek.a_bits_opcode;
   uint32_t addr = tl_peek.a_bits_address;
@@ -167,21 +193,7 @@ void VBridgeImpl::dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterf
         }
         return;
       }
-        // fetch
-//      case TlOpcode::AcquireBlock: {
-//        cnt = 1;
-//        LOG(INFO) << fmt::format("acquire fetch  here ");
-//        for (int i = 0; i < 8; i++) {
-//          uint64_t data = 0;
-//          for (int j = 0; j < 8; ++j) {
-//            data += (uint64_t) load(addr + j + i * 8) << (j * 8);
-//          }
-//          aquire_banks[i].data = data;
-//          aquire_banks[i].param = param;
-//          aquire_banks[i].source = src;
-//          aquire_banks[i].remaining = true;
-//        }
-//      }
+
       default:
         LOG(FATAL) << fmt::format("unknown tl opcode {}", opcode);
     }
@@ -198,9 +210,9 @@ void VBridgeImpl::dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterf
   // list the queue if error
   if (se == nullptr) {
     for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-      LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}",
-                               se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits,
-                               se_iter->is_committed);
+      LOG(INFO)
+          << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}", se_iter->pc,
+                         se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
       LOG(INFO) << fmt::format("List:spike block.addr = {:08X}", se_iter->block.addr);
     }
     LOG(FATAL)
@@ -214,36 +226,38 @@ void VBridgeImpl::dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterf
       auto mem_read = se->mem_access_record.all_reads.find(addr);
       CHECK_S(mem_read != se->mem_access_record.all_reads.end())
               << fmt::format(": [{}] cannot find mem read of addr {:08X}", get_t(), addr);
-      CHECK_EQ_S(mem_read->second.size_by_byte, decode_size(size)) << fmt::format(
-            ": [{}] expect mem read of size {}, actual size {} (addr={:08X}, {})",
-            get_t(), mem_read->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
+      CHECK_EQ_S(mem_read->second.size_by_byte, decode_size(size))
+        << fmt::format(": [{}] expect mem read of size {}, actual size {} (addr={:08X}, {})", get_t(),
+                       mem_read->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
 
       uint64_t data = mem_read->second.val;
-      LOG(INFO) << fmt::format("[{}] receive rtl mem get req (addr={}, size={}byte), should return data {}",
-                               get_t(), addr, decode_size(size), data);
-      tl_banks.emplace(std::make_pair(addr, TLReqRecord{
-          data, 1u << size, src, TLReqRecord::opType::Get, get_mem_req_cycles()}));
+      LOG(INFO)
+          << fmt::format("[{}] receive rtl mem get req (addr={}, size={}byte), should return data {}", get_t(), addr,
+                         decode_size(size), data);
+      tl_banks.emplace(
+          std::make_pair(addr, TLReqRecord{data, 1u << size, src, TLReqRecord::opType::Get, get_mem_req_cycles()}));
       mem_read->second.executed = true;
       break;
     }
 
     case TlOpcode::PutFullData: {
       uint32_t data = tl_peek.a_bits_data;
-      LOG(INFO) << fmt::format("[{}] receive rtl mem put req (addr={:08X}, size={}byte, data={})",
-                               addr, decode_size(size), data);
+      LOG(INFO)
+          << fmt::format("[{}] receive rtl mem put req (addr={:08X}, size={}byte, data={})", addr, decode_size(size),
+                         data);
       auto mem_write = se->mem_access_record.all_writes.find(addr);
 
       CHECK_S(mem_write != se->mem_access_record.all_writes.end())
               << fmt::format(": [{}] cannot find mem write of addr={:08X}", get_t(), addr);
-      CHECK_EQ_S(mem_write->second.size_by_byte, decode_size(size)) << fmt::format(
-            ": [{}] expect mem write of size {}, actual size {} (addr={:08X}, insn='{}')",
-            get_t(), mem_write->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
-      CHECK_EQ_S(mem_write->second.val, data) << fmt::format(
-            ": [{}] expect mem write of data {}, actual data {} (addr={:08X}, insn='{}')",
-            get_t(), mem_write->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
+      CHECK_EQ_S(mem_write->second.size_by_byte, decode_size(size))
+        << fmt::format(": [{}] expect mem write of size {}, actual size {} (addr={:08X}, insn='{}')", get_t(),
+                       mem_write->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
+      CHECK_EQ_S(mem_write->second.val, data)
+        << fmt::format(": [{}] expect mem write of data {}, actual data {} (addr={:08X}, insn='{}')", get_t(),
+                       mem_write->second.size_by_byte, 1 << decode_size(size), addr, se->describe_insn());
 
-      tl_banks.emplace(std::make_pair(addr, TLReqRecord{
-          data, 1u << size, src, TLReqRecord::opType::PutFullData, get_mem_req_cycles()}));
+      tl_banks.emplace(std::make_pair(addr, TLReqRecord{data, 1u << size, src, TLReqRecord::opType::PutFullData,
+                                                        get_mem_req_cycles()}));
       mem_write->second.executed = true;
       break;
     }
@@ -281,9 +295,9 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
     }
     if (fetch_bank.remaining) {
       fetch_bank.remaining = false;
-      *tl_poke.d_bits_opcode = 1;
+      *tl_poke.d_bits_opcode = TlOpcode::AccessAckData;
       *tl_poke.d_bits_data_high = fetch_bank.data >> 32;
-      *tl_poke.d_bits_data_low  = fetch_bank.data;
+      *tl_poke.d_bits_data_low = fetch_bank.data;
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
@@ -299,10 +313,11 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
     if (aquire_bank.remaining) {
 //      LOG(INFO) << fmt::format("poke, time ={} ", get_t());
       aquire_bank.remaining = false;
-      *tl_poke.d_bits_opcode = 5;
+      *tl_poke.d_bits_opcode = aquire_bank.is_releaseData ? 6 : 5;
       *tl_poke.d_bits_data_low = aquire_bank.data;
       *tl_poke.d_bits_data_high = aquire_bank.data >> 32;
       *tl_poke.d_bits_param = 0;
+      aquire_bank.is_releaseData = false;
       source = aquire_bank.source;
       size = 6;
       aqu_valid = true;
@@ -386,9 +401,9 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     }
     if (se == nullptr) {
       for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-        LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}",
-                                 se_iter->pc, se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits,
-                                 se_iter->is_committed);
+        LOG(INFO)
+            << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}", se_iter->pc,
+                           se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
       }
 
       LOG(FATAL)

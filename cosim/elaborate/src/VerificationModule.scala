@@ -221,7 +221,7 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input bit dReady,
          |  input bit miss
          |);
-         |import "DPI-C" function void dpiPeekChannelA(
+         |import "DPI-C" function void $desiredName(
          |  input bit[31:0] pc,
          |  input bit[${aBits.opcode.getWidth - 1}:0]  a_opcode,
          |  input bit[${aBits.param.getWidth - 1}:0]   a_param,
@@ -230,12 +230,20 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  input bit[${aBits.address.getWidth - 1}:0] a_address,
          |  input bit[${aBits.mask.getWidth - 1}:0]    a_mask,
          |  input bit[${aBits.data.getWidth - 1}:0]    a_data,
+         |  input bit[${aBits.opcode.getWidth - 1}:0]  c_opcode,
+         |  input bit[${aBits.param.getWidth - 1}:0]   c_param,
+         |  input bit[${aBits.size.getWidth - 1}:0]    c_size,
+         |  input bit[${aBits.source.getWidth - 1}:0]  c_source,
+         |  input bit[${aBits.address.getWidth - 1}:0] c_address,
+         |  input bit[${aBits.data.getWidth - 1}:0]    c_data,
          |  input bit a_corrupt,
          |  input bit a_valid,
+         |  input bit c_corrupt,
+         |  input bit c_valid,
          |  input bit d_ready,
          |  input miss
          |);
-         |always @ (posedge clock) #($latPeekTL) dpiPeekChannelA(
+         |always @ (posedge clock) #($latPeekTL) $desiredName(
          |  pc,
          |  aBits_opcode,
          |  aBits_param,
@@ -244,8 +252,16 @@ class VerificationModule(dut:DUT) extends TapModule {
          |  aBits_address,
          |  aBits_mask,
          |  aBits_data,
+         |  cBits_opcode,
+         |  cBits_param,
+         |  cBits_size,
+         |  cBits_source,
+         |  cBits_address,
+         |  cBits_data,
          |  aBits_corrupt,
          |  aValid,
+         |  cBits_corrupt,
+         |  cValid,
          |  dReady,
          |  miss
          |);
