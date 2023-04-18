@@ -1,14 +1,14 @@
 // See LICENSE.Berkeley for license details.
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Cat, Decoupled, Mux1H, OHToUInt, RegEnable, Valid, isPow2, log2Ceil, log2Up, PopCount}
 import freechips.rocketchip.amba._
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util.{DescribedSRAM, _}
 import freechips.rocketchip.util.property

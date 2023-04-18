@@ -1,11 +1,11 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Cat, log2Ceil}
 import org.chipsalliance.cde.config._
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.util._
 
 class PMPConfig extends Bundle {

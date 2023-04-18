@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._

@@ -1,6 +1,6 @@
 // See LICENSE.Berkeley for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.BitPat

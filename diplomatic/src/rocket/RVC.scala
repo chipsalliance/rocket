@@ -1,11 +1,11 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.util._
 
 class ExpandedInstruction extends Bundle {

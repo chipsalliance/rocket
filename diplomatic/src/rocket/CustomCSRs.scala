@@ -1,6 +1,6 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.tile
+package org.chipsalliance.rockettile
 
 import chisel3._
 

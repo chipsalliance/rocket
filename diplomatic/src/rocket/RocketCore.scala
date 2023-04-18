@@ -1,16 +1,15 @@
 // See LICENSE.Berkeley for license details.
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
 import chisel3.withClock
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
-import freechips.rocketchip.scie._
 import scala.collection.mutable.ArrayBuffer
 
 case class RocketCoreParams(

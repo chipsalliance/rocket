@@ -1,13 +1,13 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.tile
+package org.chipsalliance.rockettile
 
-import chisel3.Vec
+import  chisel3.Vec
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.prci._
-import freechips.rocketchip.rocket.{TracedInstruction}
+import org.chipsalliance.rocket.{TracedInstruction}
 import freechips.rocketchip.subsystem.{TileCrossingParamsLike, CrossesToOnlyOneResetDomain}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util.{TraceCoreInterface}

@@ -1,7 +1,7 @@
 // See LICENSE.Berkeley for license details.
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.tile
+package org.chipsalliance.rockettile
 
 import chisel3._
 import chisel3.util._
@@ -9,7 +9,7 @@ import chisel3.util.HasBlackBoxResource
 import chisel3.experimental.IntParam
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.rocket._
+import org.chipsalliance.rocket._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util.InOrderArbiter
 

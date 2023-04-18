@@ -1,15 +1,15 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.tile
+package org.chipsalliance.rockettile
 
 import Chisel._
 
 import org.chipsalliance.cde.config._
+import org.chipsalliance.rocket._
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.diplomacy._
 
 import freechips.rocketchip.interrupts._
-import freechips.rocketchip.rocket._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.prci.{ClockSinkParameters}

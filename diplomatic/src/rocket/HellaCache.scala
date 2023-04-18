@@ -1,7 +1,7 @@
 // See LICENSE.SiFive for license details.
 // See LICENSE.Berkeley for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{isPow2,log2Ceil,log2Up,Decoupled,Valid}
@@ -9,7 +9,7 @@ import chisel3.dontTouch
 import freechips.rocketchip.amba._
 import org.chipsalliance.cde.config.{Parameters, Field}
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import scala.collection.mutable.ListBuffer
