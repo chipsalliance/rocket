@@ -61,7 +61,7 @@ void VBridgeImpl::dpiDumpWave() {
   *resetVector = v;
 }
 
-[[maybe_unused]] void dpiPeekTL(
+[[maybe_unused]] void dpiPeekChannelA(
     const svBitVecVal *pc,
     const svBitVecVal *a_opcode,
     const svBitVecVal *a_param,
@@ -76,7 +76,7 @@ void VBridgeImpl::dpiDumpWave() {
     svBit miss
 ) {
   TRY({
-        vbridge_impl_instance.dpiPeekTL(miss, *pc,
+        vbridge_impl_instance.dpiPeekChannelA(miss, *pc,
                                         TlPeekInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask,
                                                         *a_data,
                                                         a_corrupt, a_valid, d_ready});

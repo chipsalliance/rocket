@@ -59,7 +59,7 @@ public:
 
     void dpiPokeTL(const TlPokeInterface &tl_poke);
 
-    void dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek);
+    void dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek);
 
     void dpiRefillQueue();
 

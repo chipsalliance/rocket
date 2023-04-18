@@ -186,11 +186,13 @@ class VerificationModule(dut:DUT) extends TapModule {
 
 
   @instantiable
-  class PeekTL(param_a: TileLinkChannelAParameter) extends ExtModule with HasExtModuleInline {
+  class PeekTL(param_a: TileLinkChannelAParameter, param_c: TileLinkChannelCParameter) extends ExtModule with HasExtModuleInline {
     override val desiredName = "dpiPeekTL"
     @public val clock = IO(Input(Clock()))
     @public val aBits: TLChannelA = IO(Input(new TLChannelA(param_a)))
+    @public val cBits: TLChannelC = IO(Input(new TLChannelC(param_c)))
     @public val aValid: Bool = IO(Input(Bool()))
+    @public val cValid: Bool = IO(Input(Bool()))
     @public val dReady: Bool = IO(Input(Bool()))
     @public val miss: Bool = IO(Input(Bool()))
     @public val pc :UInt = IO(Input(UInt(32.W)))
@@ -199,33 +201,41 @@ class VerificationModule(dut:DUT) extends TapModule {
       s"""module $desiredName(
          |  input clock,
          |  input bit[31:0] pc,
-         |  input bit[${aBits.opcode.getWidth - 1}:0] aBits_opcode,
-         |  input bit[${aBits.param.getWidth - 1}:0] aBits_param,
-         |  input bit[${aBits.size.getWidth - 1}:0] aBits_size,
-         |  input bit[${aBits.source.getWidth - 1}:0] aBits_source,
+         |  input bit[${aBits.opcode.getWidth - 1}:0]  aBits_opcode,
+         |  input bit[${aBits.param.getWidth - 1}:0]   aBits_param,
+         |  input bit[${aBits.size.getWidth - 1}:0]    aBits_size,
+         |  input bit[${aBits.source.getWidth - 1}:0]  aBits_source,
          |  input bit[${aBits.address.getWidth - 1}:0] aBits_address,
-         |  input bit[${aBits.mask.getWidth - 1}:0] aBits_mask,
-         |  input bit[${aBits.data.getWidth - 1}:0] aBits_data,
+         |  input bit[${aBits.mask.getWidth - 1}:0]    aBits_mask,
+         |  input bit[${aBits.data.getWidth - 1}:0]    aBits_data,
+         |  input bit[${cBits.opcode.getWidth - 1}:0]  cBits_opcode,
+         |  input bit[${cBits.param.getWidth - 1}:0]   cBits_param,
+         |  input bit[${cBits.size.getWidth - 1}:0]    cBits_size,
+         |  input bit[${cBits.source.getWidth - 1}:0]  cBits_source,
+         |  input bit[${cBits.address.getWidth - 1}:0] cBits_address,
+         |  input bit[${cBits.data.getWidth - 1}:0]    cBits_data,
          |  input bit aBits_corrupt,
+         |  input bit cBits_corrupt,
          |  input bit aValid,
+         |  input bit cValid,
          |  input bit dReady,
          |  input bit miss
          |);
-         |import "DPI-C" function void $desiredName(
+         |import "DPI-C" function void dpiPeekChannelA(
          |  input bit[31:0] pc,
-         |  input bit[${aBits.opcode.getWidth - 1}:0] a_opcode,
-         |  input bit[${aBits.param.getWidth - 1}:0] a_param,
-         |  input bit[${aBits.size.getWidth - 1}:0] a_size,
-         |  input bit[${aBits.source.getWidth - 1}:0] a_source,
+         |  input bit[${aBits.opcode.getWidth - 1}:0]  a_opcode,
+         |  input bit[${aBits.param.getWidth - 1}:0]   a_param,
+         |  input bit[${aBits.size.getWidth - 1}:0]    a_size,
+         |  input bit[${aBits.source.getWidth - 1}:0]  a_source,
          |  input bit[${aBits.address.getWidth - 1}:0] a_address,
-         |  input bit[${aBits.mask.getWidth - 1}:0] a_mask,
-         |  input bit[${aBits.data.getWidth - 1}:0] a_data,
+         |  input bit[${aBits.mask.getWidth - 1}:0]    a_mask,
+         |  input bit[${aBits.data.getWidth - 1}:0]    a_data,
          |  input bit a_corrupt,
          |  input bit a_valid,
          |  input bit d_ready,
          |  input miss
          |);
-         |always @ (posedge clock) #($latPeekTL) $desiredName(
+         |always @ (posedge clock) #($latPeekTL) dpiPeekChannelA(
          |  pc,
          |  aBits_opcode,
          |  aBits_param,
@@ -243,7 +253,7 @@ class VerificationModule(dut:DUT) extends TapModule {
          |""".stripMargin
     )
   }
-
+  @instantiable
   class PokeTL(param_d: TileLinkChannelDParameter) extends ExtModule with HasExtModuleInline {
     override val desiredName = "dpiPokeTL"
     @public val clock = IO(Input(Clock()))
@@ -300,10 +310,12 @@ class VerificationModule(dut:DUT) extends TapModule {
     )
   }
 
-  val dpiPeekTL = Module(new PeekTL(tlAParam))
+  val dpiPeekTL = Module(new PeekTL(tlAParam,tlCParam))
   dpiPeekTL.clock := clock
   dpiPeekTL.aBits := tlportA.bits
+  dpiPeekTL.cBits := tlportC.bits
   dpiPeekTL.aValid := tlportA.valid
+  dpiPeekTL.cValid := tlportC.valid
   dpiPeekTL.dReady := tlportD.ready
   dpiPeekTL.pc := tap(dut.ldut.rocketTile.module.core.rocketImpl.ex_reg_pc)
   dpiPeekTL.miss := tap(dut.ldut.rocketTile.frontend.icache.module.s2_miss)

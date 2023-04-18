@@ -141,7 +141,7 @@ void VBridgeImpl::dpiInitCosim() {
   dpiDumpWave();
 }
 
-void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek) {
+void VBridgeImpl::dpiPeekChannelA(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
   if (!tl_peek.a_valid) return;
