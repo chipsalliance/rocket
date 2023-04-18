@@ -1,13 +1,13 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.tile
+package org.chipsalliance.rockettile
 
 import Chisel._
 import Chisel.ImplicitConversions._
 import chisel3.util.Valid
 import chisel3.DontCare
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.rocket._
+import org.chipsalliance.rocket._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.regmapper._
 import freechips.rocketchip.tilelink._

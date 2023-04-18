@@ -1,11 +1,11 @@
 // See LICENSE.SiFive for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Decoupled,log2Ceil,Cat,UIntToOH,Fill}
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile._
+import org.chipsalliance.rockettile._
 import freechips.rocketchip.util._
 
 class Instruction(implicit val p: Parameters) extends ParameterizedBundle with HasCoreParameters {

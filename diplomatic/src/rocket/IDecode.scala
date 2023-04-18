@@ -1,13 +1,12 @@
 // See LICENSE.SiFive for license details.
 // See LICENSE.Berkeley for license details.
 
-package freechips.rocketchip.rocket
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.util._
-import freechips.rocketchip.scie.SCIE
 import Instructions._
 import CustomInstructions._
 
