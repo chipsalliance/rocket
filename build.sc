@@ -501,7 +501,7 @@ object tests extends Module(){
             "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
-            "COSIM_timeout" -> "20000",
+            "COSIM_timeout" -> "18000",
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
           T.log.info(s"run test: ${c.path.last} ")

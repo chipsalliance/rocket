@@ -48,6 +48,7 @@ struct SpikeEvent {
     bool is_store;
     bool is_csr;
     bool is_amo;
+    bool is_mutiCycle;
 
     std::string disasm;
 
@@ -57,8 +58,8 @@ struct SpikeEvent {
     bool is_compress;
 
     // scalar to vector interface(used for driver)
-    uint32_t rs1_bits;
-    uint32_t rs2_bits;
+    uint64_t rs1_bits;
+    uint64_t rs2_bits;
     // rd idx and bits before insn
     uint32_t rd_idx;
     uint64_t rd_old_bits;

@@ -23,9 +23,7 @@ struct TLReqRecord {
 
     /// when opType set to nil, it means this record is already sent back
     enum class opType {
-        Nil,
-        Get,
-        PutFullData
+        Nil, Get, PutFullData
     } op;
     int remaining_cycles;
 
@@ -127,6 +125,10 @@ private:
     int beforeReturnAquire;
 
     int afterReturnAquire;
+
+    bool waitforMutiCycleInsn;
+    bool mutiCycleInsnDone;
+    uint64_t pendingInsn_pc;
 
     int get_mem_req_cycles() {
       return 1;

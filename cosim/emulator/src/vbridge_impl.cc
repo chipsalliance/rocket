@@ -56,9 +56,8 @@ void VBridgeImpl::loop_until_se_queue_full() {
   }
   LOG(INFO) << fmt::format("to_rtl_queue is full now, start to simulate.");
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-    LOG(INFO)
-        << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}", se_iter->pc, se_iter->rd_idx,
-                       se_iter->rd_old_bits, se_iter->rd_new_bits);
+    LOG(INFO) << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X},commit={}", se_iter->pc,
+                             se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
   }
 }
 
@@ -153,7 +152,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
         LOG(FATAL) << fmt::format("Find c release");
 
       }
-      // todo: check release data
+        // todo: check release data
       case TlOpcode::ReleaseData: {
         aquire_banks[0].data = 0;
         aquire_banks[0].param = tl_c.c_bits_param;
@@ -195,7 +194,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
       }
 
       default:
-        LOG(FATAL) << fmt::format("unknown tl opcode {}", opcode);
+        LOG(FATAL_S) << fmt::format("unknown tl opcode {}", opcode);
     }
   }
   // find corresponding SpikeEvent with addr
@@ -215,7 +214,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
                          se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
       LOG(INFO) << fmt::format("List:spike block.addr = {:08X}", se_iter->block.addr);
     }
-    LOG(FATAL)
+    LOG(FATAL_S)
         << fmt::format("cannot find spike_event for tl_request; addr = {:08X}, pc = {:08X} , opcode = {}", addr, pc,
                        opcode);
   }
@@ -264,7 +263,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
     case TlOpcode::AcquireBlock: {
       beforeReturnAquire = 1;
-      LOG(INFO) << fmt::format("Find AcquireBlock for mem = {:08X}", addr);
+      LOG(INFO) << fmt::format("Find A Acquire for mem = {:08X}", addr);
       for (int i = 0; i < 8; i++) {
         uint64_t data = 0;
         for (int j = 0; j < 8; ++j) {
@@ -348,6 +347,14 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
   if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
   }
+
+  if (waitforMutiCycleInsn)
+  {
+    LOG(INFO) << fmt::format("waitforMutiCycleInsn = {}", waitforMutiCycleInsn);
+    return;
+  }
+
+
   // set this spike event as committed
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (se_iter->pc == pc) {
@@ -365,6 +372,19 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
       break;
     }
   }
+
+  // set muticycleInsn as committed
+  for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
+    if (se_iter->pc == pendingInsn_pc) {
+      pendingInsn_pc = 0;
+      se_iter->is_committed = true;
+      haveCommittedSe = true;
+      LOG(INFO) << fmt::format("Set spike {:08X} as committed", se_iter->pc);
+      break;
+    }
+  }
+
+
   if (!haveCommittedSe) LOG(INFO) << fmt::format("RTL wb without se in pc =  {:08X}", pc);
   // pop the committed Event from the queue
   for (int i = 0; i < to_rtl_queue_size; i++) {
@@ -391,6 +411,13 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // exclude those rtl reg_write from csr insn
   if (!rtl_csr) {
     LOG(INFO) << fmt::format("RTL wirte reg({}) = {:08X}, pc = {:08X}", waddr, wdata, pc);
+    if (waitforMutiCycleInsn) {
+      LOG(INFO) << fmt::format("Find waiting muti");
+      pc = pendingInsn_pc;
+      waitforMutiCycleInsn = false;
+      mutiCycleInsnDone = true;
+
+    }
     // find corresponding spike event
     SpikeEvent *se = nullptr;
     for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
@@ -407,14 +434,22 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
       }
 
       LOG(FATAL)
-          << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , insn={:08X}, waddr=Reg({})", pc, insn, waddr);
+          << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , waddr={:08X}, waddr=Reg({})", pc, waddr, waddr);
     }
     // start to check RTL rf_write with spike event
     // for non-store ins. check rf write
     // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
-    if (!(se->is_store)) {
+    if ((!se->is_store) && (!se->is_mutiCycle)) {
       CHECK_EQ_S(wdata, se->rd_new_bits)
         << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
+    } else if (se->is_mutiCycle) {
+      if (!mutiCycleInsnDone) {
+        waitforMutiCycleInsn = true;
+        mutiCycleInsnDone = false;
+        pendingInsn_pc = pc;
+        LOG(INFO) << fmt::format("Find MutiCycle Instruction");
+      }
+
     } else {
       LOG(INFO) << fmt::format("Find Store insn");
     }

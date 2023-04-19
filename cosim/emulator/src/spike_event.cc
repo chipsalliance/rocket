@@ -57,7 +57,7 @@ void SpikeEvent::log_arch_changes() {
   for (auto mem_write: state->log_mem_write) {
     uint64_t address = std::get<0>(mem_write);
     if (address != target_mem) {
-      LOG(FATAL) << fmt::format("Error! spike detect mem_write at= {:08X}; target mem = {:08X}", address, target_mem);
+      LOG(FATAL_S) << fmt::format("Error! spike detect mem_write at= {:08X}; target mem = {:08X}", address, target_mem);
     }
     uint64_t value = std::get<1>(mem_write);
     // Byte size_bytes
@@ -70,7 +70,7 @@ void SpikeEvent::log_arch_changes() {
   for (auto mem_read: state->log_mem_read) {
     uint64_t address = std::get<0>(mem_read);
     if (address != target_mem) {
-      LOG(FATAL) << fmt::format("Error! spike detect mem_read at= {:08X}; target mem = {:08X}", address, target_mem);
+      LOG(FATAL_S) << fmt::format("Error! spike detect mem_read at= {:08X}; target mem = {:08X}", address, target_mem);
     }
     // Byte size_bytes
     uint8_t size_by_byte = std::get<2>(mem_read);
@@ -121,6 +121,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
     rs2_bits = xr[fetch.insn.rs2()];
     rd_idx = fetch.insn.rd();
     opcode = clip(inst_bits, 0, 6);
+    uint8_t func7 = (inst_bits & 0xFE000000) >> 25;
     // for j insn for x0;
     if (opcode == 0b1101111 && rd_idx == 0) {
       is_committed = true;
@@ -129,6 +130,8 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
     is_load = (opcode == 0b11) || (opcode == 0b0000111);
     is_store = opcode == 0b100011 || (opcode == 0b0100111);
     is_amo = opcode == 0b0101111;
+
+    is_mutiCycle = (opcode == 0b0110011)&&(func7 == 0b1);
 
     if (is_load) {
       target_mem = rs1_bits + fetch.insn.i_imm();
