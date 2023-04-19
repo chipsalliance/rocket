@@ -498,14 +498,14 @@ object tests extends Module(){
           val name = c.path.last
           val runEnv = Map(
             "COSIM_bin" -> c.path.toString,
-            //          "COSIM_entrance_bin" -> "/home/yyq/Projects/rrocket/out/cases/entrance/compile.dest/entrance",
             "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
+            "COSIM_timeout" -> "20000",
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
-          T.log.info(s"run test: ${c.path.last} with:\n ${proc.command.map(_.value.mkString(" ")).mkString(" ")}")
-          val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv)
+          T.log.info(s"run test: ${c.path.last} ")
+          val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv,check=false)
 
           PathRef(if (p.exitCode != 0) {
             os.move(T.dest / s"$name.running.log", T.dest / s"$name.failed.log")

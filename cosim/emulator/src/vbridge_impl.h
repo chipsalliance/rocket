@@ -100,6 +100,8 @@ private:
     /// reset vector of
     const uint64_t reset_vector = std::stoul(get_env_arg("COSIM_reset_vector"), nullptr, 16);
 
+    const uint64_t timeout = std::stoul(get_env_arg("COSIM_timeout"), nullptr, 10);
+
 
     //Spike
     const size_t to_rtl_queue_size = 10;

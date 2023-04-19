@@ -119,7 +119,7 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 }
 
 int VBridgeImpl::timeoutCheck() {
-  if (get_t() > 20000) {
+  if (get_t() > timeout) {
     LOG(INFO) << fmt::format("Simulation timeout, time = {}", get_t());
     return 1;
   }
