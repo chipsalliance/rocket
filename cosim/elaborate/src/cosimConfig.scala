@@ -13,10 +13,7 @@ object RocketTileParamsKey extends Field[RocketTileParams]
 class cosimConfig extends Config((site, here, up) => {
   case MonitorsEnabled => false
   case freechips.rocketchip.tile.XLen => 64
-  case freechips.rocketchip.tile.XLen => 64
   case freechips.rocketchip.tile.MaxHartIdBits => 4
-  case freechips.rocketchip.tile.MaxHartIdBits => 4
-  case freechips.rocketchip.rocket.PgLevels => if (site(freechips.rocketchip.tile.XLen) == 64) 3 else 2
   case freechips.rocketchip.rocket.PgLevels => if (site(freechips.rocketchip.tile.XLen) == 64) 3 else 2
   case RocketTileParamsKey => RocketTileParams(
     core = RocketCoreParams(mulDiv = Some(MulDivParams(

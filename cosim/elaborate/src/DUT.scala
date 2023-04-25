@@ -92,8 +92,6 @@ class DUT(p: Parameters) extends Module {
   val memory_0_d = IO(Flipped(Decoupled(new TLChannelD(tlDParam))))
   val memory_0_e = IO(Decoupled(new TLChannelE(tlEParam)))
 
-  dontTouch(memory_0_a)
-
   val nmi = IO(Input(new NMI(32)))
   val intIn = IO(Input(Bool()))
   val resetVector = IO(Input(UInt(32.W)))
@@ -162,9 +160,6 @@ class DUT(p: Parameters) extends Module {
       else if (name == "memory_0_d_bits_corrupt") ele := memory_0_d.bits.corrupt
       else if (name == "memory_0_d_bits_denied") ele := memory_0_d.bits.denied
       else if (name == "memory_0_d_bits_sink") ele := memory_0_d.bits.sink
-
-
-
 
       else{
         chisel3.experimental.DataMirror.directionOf(ele) match {
