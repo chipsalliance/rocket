@@ -524,20 +524,21 @@ object tests extends Module() {
     trait Test extends TaskModule {
       override def defaultCommandName() = "run"
 
-      def bin: cases.Case
-
       def run(args: String*) = T.command {
-        val proc = os.proc(Seq(cosim.emulator.elf().path.toString(), "--entrance", cases.entrance.compile().path.toString(), "--bin", bin.compile().path.toString, "--wave", (T.dest / "wave").toString) ++ args)
-        T.log.info(s"run test: ${bin.name} with:\n ${proc.command.map(_.value.mkString(" ")).mkString(" ")}")
-        proc.call()
+        val bin = cases.smoketest.compile()
+
+        val runEnv = Map(
+          "COSIM_bin" -> bin.path.toString(),
+          "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
+          "COSIM_wave" -> (T.dest / "wave").toString,
+          "COSIM_reset_vector" -> "80000000",
+        )
+        T.log.info(s"run smoketest with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulator.elf().path.toString()}")
+        os.proc(Seq(cosim.emulator.elf().path.toString())).call(env = runEnv)
         PathRef(T.dest)
       }
     }
-
-    object smoketest extends Test {
-      def bin = cases.smoketest
-    }
-
+    object smoketest extends Test {}
   }
 
   object riscvtests extends Module {
@@ -648,33 +649,4 @@ object tests extends Module() {
     }
 
   }
-
-  object tmptest extends Module {
-    trait Test extends TaskModule {
-      override def defaultCommandName() = "run"
-
-
-      def run(args: String*) = T.command {
-        val bin = os.pwd / "rv64mi-p-access.elf"
-
-        val runEnv = Map(
-          "COSIM_bin" -> bin.toString(),
-          //          "COSIM_entrance_bin" -> "/home/yyq/Projects/rrocket/out/cases/entrance/compile.dest/entrance",
-          "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
-          "COSIM_wave" -> (T.dest / "wave").toString,
-          "COSIM_reset_vector" -> "80000000",
-        )
-        T.log.info(s"run test: xx with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulator.elf().path.toString()}")
-        os.proc(Seq(cosim.emulator.elf().path.toString())).call(env = runEnv)
-        PathRef(T.dest)
-      }
-    }
-
-    object tmptest extends Test {
-
-
-    }
-
-  }
-
 }
