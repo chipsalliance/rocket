@@ -60,12 +60,11 @@ trait HasL1ICacheParameters extends HasL1CacheParameters with HasCoreParameters 
   val cacheParams = tileParams.icache.get
 }
 
-class ICacheReq(implicit p: Parameters) extends CoreBundle()(p) with HasL1ICacheParameters {
+class ICacheReq(vaddrBits: Int) extends Bundle {
   val addr = UInt(vaddrBits.W)
 }
 
-class ICacheErrors(implicit p: Parameters) extends CoreBundle()(p)
-    with HasL1ICacheParameters
+class ICacheErrors(paddrBits :Int, cacheParams : ICacheParams) extends Bundle
     with CanHaveErrors {
   val correctable = (cacheParams.tagCode.canDetect || cacheParams.dataCode.canDetect).option(Valid(UInt(paddrBits.W)))
   val uncorrectable = (cacheParams.itimAddr.nonEmpty && cacheParams.dataCode.canDetect).option(Valid(UInt(paddrBits.W)))
@@ -119,7 +118,8 @@ class ICacheErrors(implicit p: Parameters) extends CoreBundle()(p)
   * @param icacheParams parameter to this I$.
   * @param staticIdForMetadataUseOnly metadata used for hart id.
   */
-class ICache(val icacheParams: ICacheParams, val staticIdForMetadataUseOnly: Int)(implicit p: Parameters) extends LazyModule {
+class ICache(val icacheParams: ICacheParams, val staticIdForMetadataUseOnly: Int, usingVM: Boolean, paddrBits :Int, vaddrBits:Int, ppnBits:Int, vpnBits:Int) (implicit p: Parameters)
+  extends LazyModule{
   lazy val module = new ICacheModule(this)
 
   /** Diplomatic hartid bundle used for ITIM. */
@@ -133,7 +133,13 @@ class ICache(val icacheParams: ICacheParams, val staticIdForMetadataUseOnly: Int
     * AMBA privileged, secure will be set as true while others set as false.
     * see [[freechips.rocketchip.amba.AMBAProt]] for more informations.
     */
-  val useVM = p(TileKey).core.useVM
+  val useVM = usingVM: Boolean
+
+  val pBits = paddrBits
+  val vBits = vaddrBits
+  val ppn = ppnBits
+  val vpn = vpnBits
+  val iCacheParams = icacheParams
 
   /** [[TLClientNode]] of I$.
     *
@@ -208,11 +214,11 @@ class ICachePerfEvents extends Bundle {
 }
 
 /** IO from CPU to ICache. */
-class ICacheBundle(val outer: ICache) extends CoreBundle()(outer.p) {
+class ICacheBundle(val outer: ICache) extends Bundle {
   /** first cycle requested from CPU. */
-  val req = Flipped(Decoupled(new ICacheReq))
-  val s1_paddr = Input(UInt(paddrBits.W)) // delayed one cycle w.r.t. req
-  val s2_vaddr = Input(UInt(vaddrBits.W)) // delayed two cycles w.r.t. req
+  val req = Flipped(Decoupled(new ICacheReq(outer.vBits)))
+  val s1_paddr = Input(UInt(outer.pBits.W)) // delayed one cycle w.r.t. req
+  val s2_vaddr = Input(UInt(outer.vBits.W)) // delayed two cycles w.r.t. req
   val s1_kill = Input(Bool()) // delayed one cycle w.r.t. req
   val s2_kill = Input(Bool()) // delayed two cycles; prevents I$ miss emission
   val s2_cacheable = Input(Bool()) // should L2 cache line on a miss?
@@ -228,7 +234,7 @@ class ICacheBundle(val outer: ICache) extends CoreBundle()(outer.p) {
   /** I$ has error, notify to bus.
     * TODO: send to BPU.
     */
-  val errors = new ICacheErrors
+  val errors = new ICacheErrors(outer.pBits, outer.iCacheParams)
 
   /** for performance counting. */
   val perf = Output(new ICachePerfEvents())
