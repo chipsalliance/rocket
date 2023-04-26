@@ -5,7 +5,6 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.util._
 import Instructions._
 import CustomInstructions._
@@ -15,7 +14,7 @@ abstract trait DecodeConstants
   val table: Array[(BitPat, List[BitPat])]
 }
 
-class IntCtrlSigs(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Bundle {
+class IntCtrlSigs(aluFn: ALUFN = ALUFN()) extends Bundle {
 
   val legal = Bool()
   val fp = Bool()
@@ -70,7 +69,7 @@ class IntCtrlSigs(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Bu
   }
 }
 
-class IDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class IDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     BNE->       List(Y,N,N,Y,N,N,Y,Y,N,N,N,N,A2_RS2, A1_RS1, IMM_SB,DW_XPR,aluFn.FN_SNE,   N,M_X,        N,N,N,N,N,N,N,CSR.N,N,N,N,N),
@@ -126,7 +125,7 @@ class IDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Decode
     CSRRCI->    List(Y,N,N,N,N,N,N,N,N,N,N,N,A2_IMM, A1_ZERO,IMM_Z, DW_XPR,aluFn.FN_ADD,   N,M_X,        N,N,N,N,N,N,Y,CSR.C,N,N,N,N))
 }
 
-class FenceIDecode(flushDCache: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class FenceIDecode(flushDCache: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   private val (v, cmd) = if (flushDCache) (Y, BitPat(M_FLUSH_ALL)) else (N, M_X)
 
@@ -134,7 +133,7 @@ class FenceIDecode(flushDCache: Boolean, aluFn: ALUFN = ALUFN())(implicit val p:
     FENCE_I->   List(Y,N,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     v,cmd,        N,N,N,N,N,N,N,CSR.N,Y,Y,N,N))
 }
 
-class CFlushDecode(supportsFlushLine: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class CFlushDecode(supportsFlushLine: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   private def zapRs1(x: BitPat) = if (supportsFlushLine) x else BitPat(x.value.U)
 
@@ -145,19 +144,19 @@ class CFlushDecode(supportsFlushLine: Boolean, aluFn: ALUFN = ALUFN())(implicit 
                 List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_FLUSH_ALL,N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class SVMDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class SVMDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SFENCE_VMA->List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_SFENCE,   N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class SDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class SDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SRET->      List(Y,N,N,N,N,N,N,X,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class HypervisorDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class HypervisorDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
 
@@ -177,19 +176,19 @@ class HypervisorDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) exten
     HSV_W->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO, A1_RS1, IMM_I, DW_XPR, aluFn.FN_ADD, Y,M_XWR,      N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class DebugDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class DebugDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     DRET->      List(Y,N,N,N,N,N,N,X,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class NMIDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class NMIDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     MNRET->     List(Y,N,N,N,N,N,N,X,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,N,N,N,N,CSR.I,N,N,N,N))
 }
 
-class I32Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class I32Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.SLLI->
@@ -200,7 +199,7 @@ class I32Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
                 List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SRA,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class I64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class I64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     LD->        List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_ADD,   Y,M_XRD,      N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -222,7 +221,7 @@ class I64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
     SRAW->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2, A1_RS1, IMM_X, DW_32,aluFn.FN_SRA,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class Hypervisor64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class Hypervisor64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     HLV_D->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_ZERO, A1_RS1, IMM_X, DW_XPR, aluFn.FN_ADD, Y,M_XRD,      N,N,N,N,N,N,Y,CSR.I,N,N,N,N),
@@ -230,7 +229,7 @@ class Hypervisor64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) ext
     HLV_WU->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_ZERO, A1_RS1, IMM_X, DW_XPR, aluFn.FN_ADD, Y,M_XRD,      N,N,N,N,N,N,Y,CSR.I,N,N,N,N))
 }
 
-class MDecode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class MDecode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val M = if (pipelinedMul) Y else N
   val D = if (pipelinedMul) N else Y
@@ -246,7 +245,7 @@ class MDecode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: Par
     REMU->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2, A1_RS1, IMM_X, DW_XPR,aluFn.FN_REMU,  N,M_X,        N,N,N,N,N,Y,Y,CSR.N,N,N,N,N))
 }
 
-class M64Decode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class M64Decode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val M = if (pipelinedMul) Y else N
   val D = if (pipelinedMul) N else Y
@@ -259,7 +258,7 @@ class M64Decode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN())(implicit val p: P
     REMUW->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2, A1_RS1, IMM_X, DW_32, aluFn.FN_REMU,  N,M_X,        N,N,N,N,N,Y,Y,CSR.N,N,N,N,N))
 }
 
-class ADecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class ADecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     AMOADD_W->  List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XA_ADD,   N,N,N,N,N,N,Y,CSR.N,N,N,Y,N),
@@ -276,7 +275,7 @@ class ADecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Decode
     SC_W->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XSC,      N,N,N,N,N,N,Y,CSR.N,N,N,Y,N))
 }
 
-class A64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class A64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     AMOADD_D->  List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XA_ADD,   N,N,N,N,N,N,Y,CSR.N,N,N,Y,N),
@@ -293,7 +292,7 @@ class A64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
     SC_D->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XSC,      N,N,N,N,N,N,Y,CSR.N,N,N,Y,N))
 }
 
-class HDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class HDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_S_H->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,Y,N,N,N,CSR.N,N,N,N,N),
@@ -326,7 +325,7 @@ class HDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Decode
     FSQRT_H->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,Y,N,Y,N,N,N,CSR.N,N,N,N,N))
 }
 
-class FDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class FDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FSGNJ_S->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,Y,N,Y,N,N,N,CSR.N,N,N,N,N),
@@ -357,7 +356,7 @@ class FDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Decode
     FSQRT_S->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,Y,N,Y,N,N,N,CSR.N,N,N,N,N))
 }
 
-class DDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class DDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_S_D->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,Y,N,N,N,CSR.N,N,N,N,Y),
@@ -388,14 +387,14 @@ class DDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Decode
     FSQRT_D->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,Y,N,Y,N,N,N,CSR.N,N,N,N,Y))
 }
 
-class HDDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class HDDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_D_H->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,Y,N,N,N,CSR.N,N,N,N,Y),
     FCVT_H_D->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,Y,N,N,N,CSR.N,N,N,N,Y))
 }
 
-class H64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class H64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_L_H->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -404,7 +403,7 @@ class H64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
     FCVT_H_LU-> List(Y,Y,N,N,N,N,N,Y,N,N,N,N,A2_X,   A1_RS1, IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,Y,N,N,N,CSR.N,N,N,N,N))
 }
 
-class F64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class F64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_L_S->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -413,7 +412,7 @@ class F64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
     FCVT_S_LU-> List(Y,Y,N,N,N,N,N,Y,N,N,N,N,A2_X,   A1_RS1, IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,Y,N,N,N,CSR.N,N,N,N,N))
 }
 
-class D64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class D64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     FMV_X_D->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,Y),
@@ -424,7 +423,7 @@ class D64Decode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends Deco
     FCVT_D_LU-> List(Y,Y,N,N,N,N,N,Y,N,N,N,N,A2_X,   A1_RS1, IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        N,N,N,Y,N,N,N,CSR.N,N,N,N,Y))
 }
 
-class SCIEDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class SCIEDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SCIE.opcode->
@@ -435,7 +434,7 @@ trait UsesABLUFN {
   val aluFn = ABLUFN()
 }
 
-class ZBADecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBADecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SH1ADD ->   List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR, aluFn.FN_SH1ADD,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -443,7 +442,7 @@ class ZBADecode(implicit val p: Parameters) extends DecodeConstants with UsesABL
     SH3ADD ->   List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR, aluFn.FN_SH3ADD,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBA64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBA64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     ADD_UW ->   List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_64,aluFn.FN_ADDUW   ,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -454,7 +453,7 @@ class ZBA64Decode(implicit val p: Parameters) extends DecodeConstants with UsesA
 }
 
 // In both Zbb and Zbkb
-class ZBBNDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBNDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     ANDN ->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ANDN,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -463,21 +462,21 @@ class ZBBNDecode(implicit val p: Parameters) extends DecodeConstants with UsesAB
 }
 
 // In both Zbb and Zbkb
-class ZBBRDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBRDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     ROR ->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     ROL ->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ROL,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBR32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBR32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.RORI ->
                 List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBR64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBR64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     RORI ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -487,7 +486,7 @@ class ZBBR64Decode(implicit val p: Parameters) extends DecodeConstants with Uses
 }
 
 // Only in Zbb
-class ZBBCDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBCDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     CLZ ->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_CLZ ,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -495,7 +494,7 @@ class ZBBCDecode(implicit val p: Parameters) extends DecodeConstants with UsesAB
     CPOP ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_CPOP,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBC64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBC64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     CLZW ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_32,aluFn.FN_CLZ ,      N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -504,7 +503,7 @@ class ZBBC64Decode(implicit val p: Parameters) extends DecodeConstants with Uses
 }
 
 // Only in Zbb
-class ZBBMDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBMDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     MAX ->      List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_MAX ,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -514,41 +513,41 @@ class ZBBMDecode(implicit val p: Parameters) extends DecodeConstants with UsesAB
 }
 
 // Only in Zbb
-class ZBBSEDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBSEDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SEXT_H ->   List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_SEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     SEXT_B ->   List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_SEXTB,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBZE64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBZE64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     ZEXT_H ->   List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ZEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBZE32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBZE32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.ZEXT_H ->
                 List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ZEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBBORCBDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBORCBDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     ORC_B ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ORCB,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 // In both Zbb and Zbkb
-class ZBBREV864Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBREV864Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     REV8 ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_REV8,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 // In both Zbb and Zbkb
-class ZBBREV832Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBBREV832Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.REV8->
@@ -556,7 +555,7 @@ class ZBBREV832Decode(implicit val p: Parameters) extends DecodeConstants with U
 }
 
 // Only in Zbkb
-class ZBKBDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBKBDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     PACK ->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_PACK,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -564,13 +563,13 @@ class ZBKBDecode(implicit val p: Parameters) extends DecodeConstants with UsesAB
     BREV8 ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X  ,A1_RS1, IMM_X, DW_XPR,aluFn.FN_BREV8,  N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBKB64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBKB64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     PACKW ->    List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_32, aluFn.FN_PACK,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBKB32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBKB32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.ZIP ->
@@ -580,27 +579,27 @@ class ZBKB32Decode(implicit val p: Parameters) extends DecodeConstants with Uses
 }
 
 // also in Zbkc but Zbkc does not have CLMULR
-class ZBCDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBCDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     CLMUL ->    List(Y,N,N,N,N,N,Y,Y,N,Y,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_CLMUL,  N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     CLMULH ->   List(Y,N,N,N,N,N,Y,Y,N,Y,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_CLMULH, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBCRDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBCRDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     CLMULR ->   List(Y,N,N,N,N,N,Y,Y,N,Y,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_CLMULR, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBKXDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBKXDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     XPERM8 ->   List(Y,N,N,N,N,N,Y,Y,N,Y,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_XPERM8, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     XPERM4 ->   List(Y,N,N,N,N,N,Y,Y,N,Y,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_XPERM4, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBSDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBSDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     BCLR ->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_BCLR,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -609,7 +608,7 @@ class ZBSDecode(implicit val p: Parameters) extends DecodeConstants with UsesABL
     BSET ->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_BSET,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBS32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBS32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.BCLRI ->
@@ -622,7 +621,7 @@ class ZBS32Decode(implicit val p: Parameters) extends DecodeConstants with UsesA
                 List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BSET,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZBS64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZBS64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     BCLRI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BCLR,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -631,7 +630,7 @@ class ZBS64Decode(implicit val p: Parameters) extends DecodeConstants with UsesA
     BSETI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BSET,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZKND32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKND32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.AES32DSI ->
@@ -639,7 +638,7 @@ class ZKND32Decode(implicit val p: Parameters) extends DecodeConstants with Uses
     Instructions32.AES32DSMI->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DSM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
-class ZKND64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKND64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     AES64DS ->  List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DS, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -648,7 +647,7 @@ class ZKND64Decode(implicit val p: Parameters) extends DecodeConstants with Uses
     AES64KS1I ->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_AES_KS1,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     AES64KS2 -> List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_KS2,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
-class ZKNE32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKNE32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.AES32ESI ->
@@ -656,14 +655,14 @@ class ZKNE32Decode(implicit val p: Parameters) extends DecodeConstants with Uses
     Instructions32.AES32ESMI ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ESM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
-class ZKNE64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKNE64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     AES64ES ->  List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ES, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     AES64ESM -> List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ESM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZKNHDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKNHDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SHA256SIG0->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA256_SIG0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -671,7 +670,7 @@ class ZKNHDecode(implicit val p: Parameters) extends DecodeConstants with UsesAB
     SHA256SUM0->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA256_SUM0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     SHA256SUM1->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA256_SUM1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
-class ZKNH32Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKNH32Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     Instructions32.SHA512SIG0L ->
@@ -687,7 +686,7 @@ class ZKNH32Decode(implicit val p: Parameters) extends DecodeConstants with Uses
     Instructions32.SHA512SUM1R ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SUM1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
-class ZKNH64Decode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKNH64Decode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SHA512SIG0->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -696,7 +695,7 @@ class ZKNH64Decode(implicit val p: Parameters) extends DecodeConstants with Uses
     SHA512SUM1->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SUM1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class ZKSDecode(implicit val p: Parameters) extends DecodeConstants with UsesABLUFN
+class ZKSDecode extends DecodeConstants with UsesABLUFN
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     SM4ED ->    List(Y,N,N,N,N,N,Y,Y,N,N,N,Y,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SM4ED,  N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -705,7 +704,7 @@ class ZKSDecode(implicit val p: Parameters) extends DecodeConstants with UsesABL
     SM3P1 ->    List(Y,N,N,N,N,N,N,Y,N,N,N,Y,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SM3P1,  N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
-class RoCCDecode(aluFn: ALUFN = ALUFN())(implicit val p: Parameters) extends DecodeConstants
+class RoCCDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
   val table: Array[(BitPat, List[BitPat])] = Array(
     CUSTOM0->           List(Y,N,Y,N,N,N,N,N,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   N,M_X,N,N,N,N,N,N,N,CSR.N,N,N,N,N),
