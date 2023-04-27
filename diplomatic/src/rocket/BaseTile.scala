@@ -3,16 +3,15 @@
 package org.chipsalliance.rockettile
 
 import Chisel._
-
+import chisel3.util.log2Ceil
 import org.chipsalliance.cde.config._
 import org.chipsalliance.rocket._
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.diplomacy._
-
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
-import freechips.rocketchip.prci.{ClockSinkParameters}
+import freechips.rocketchip.prci.ClockSinkParameters
 
 case object TileVisibilityNodeKey extends Field[TLEphemeralNode]
 case object TileKey extends Field[TileParams]
@@ -70,11 +69,14 @@ trait HasNonDiplomaticTileParameters {
     require(pgLevels >= res)
     res
   }
+  def matchBits = tileParams.btb.get.nMatchBits max log2Ceil(p(CacheBlockBytes) * tileParams.icache.get.nSets)
   def asIdBits: Int = p(ASIdBits)
   def vmIdBits: Int = p(VMIdBits)
   lazy val maxPAddrBits: Int = {
     require(xLen == 32 || xLen == 64, s"Only XLENs of 32 or 64 are supported, but got $xLen")
     xLen match { case 32 => 34; case 64 => 56 }
+
+
   }
 
   /** Use staticIdForMetadataUseOnly to emit information during the build or identify a component to diplomacy.

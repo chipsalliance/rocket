@@ -190,7 +190,7 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   when (icache.io.resp.valid && icache.io.resp.bits.ae) { fq.io.enq.bits.xcpt.ae.inst := true.B }
 
   if (usingBTB) {
-    val btb = Module(new BTB)
+    val btb = Module(new BTB(tileParams.btb.get,fetchBytes,fetchWidth,vaddrBits,matchBits,coreInstBits))
     btb.io.flush := false.B
     btb.io.req.valid := false.B
     btb.io.req.bits.addr := s1_pc
