@@ -155,7 +155,7 @@ class RVCDecoder(x: UInt, xLen: Int, useAddiForMv: Boolean = false) {
   }
 }
 
-class RVCExpander(useAddiForMv: Boolean = false)(implicit val p: Parameters) extends Module with HasCoreParameters {
+class RVCExpander(useAddiForMv: Boolean = false,usingCompressed:Boolean,XLen:Int)extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(32.W))
     val out = Output(new ExpandedInstruction)
@@ -164,9 +164,9 @@ class RVCExpander(useAddiForMv: Boolean = false)(implicit val p: Parameters) ext
 
   if (usingCompressed) {
     io.rvc := io.in(1,0) =/= 3.U
-    io.out := new RVCDecoder(io.in, p(XLen), useAddiForMv).decode
+    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).decode
   } else {
     io.rvc := false.B
-    io.out := new RVCDecoder(io.in, p(XLen), useAddiForMv).passthrough
+    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).passthrough
   }
 }
