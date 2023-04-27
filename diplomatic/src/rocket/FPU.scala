@@ -5,7 +5,7 @@ package org.chipsalliance.rockettile
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.util.CompileOptions.NotStrictInferReset
+// import freechips.rocketchip.util.CompileOptions.NotStrictInferReset
 import chisel3.{DontCare, WireInit, withClock, withReset}
 import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.cde.config.Parameters
@@ -50,7 +50,7 @@ trait HasFPUCtrlSigs {
 
 class FPUCtrlSigs extends Bundle with HasFPUCtrlSigs
 
-class FPUDecoder(implicit p: Parameters) extends FPUModule()(p) {
+class FPUDecoder() extends FPUModule() {
   val io = IO(new Bundle {
     val inst = Input(Bits(32.W))
     val sigs = Output(new FPUCtrlSigs())
@@ -176,7 +176,7 @@ class FPUDecoder(implicit p: Parameters) extends FPUModule()(p) {
   sigs zip decoder map {case(s,d) => s := d}
 }
 
-class FPUCoreIO(implicit p: Parameters) extends CoreBundle()(p) {
+class FPUCoreIO() extends CoreBundle() {
   val hartid = Input(UInt(hartIdLen.W))
   val time = Input(UInt(xLen.W))
 
@@ -208,23 +208,23 @@ class FPUCoreIO(implicit p: Parameters) extends CoreBundle()(p) {
   val keep_clock_enabled = Input(Bool())
 }
 
-class FPUIO(implicit p: Parameters) extends FPUCoreIO ()(p) {
+class FPUIO() extends FPUCoreIO () {
   val cp_req = Flipped(Decoupled(new FPInput())) //cp doesn't pay attn to kill sigs
   val cp_resp = Decoupled(new FPResult())
 }
 
-class FPResult(implicit p: Parameters) extends CoreBundle()(p) {
+class FPResult() extends CoreBundle() {
   val data = Bits((fLen+1).W)
   val exc = Bits(FPConstants.FLAGS_SZ.W)
 }
 
-class IntToFPInput(implicit p: Parameters) extends CoreBundle()(p) with HasFPUCtrlSigs {
+class IntToFPInput() extends CoreBundle() with HasFPUCtrlSigs {
   val rm = Bits(FPConstants.RM_SZ.W)
   val typ = Bits(2.W)
   val in1 = Bits(xLen.W)
 }
 
-class FPInput(implicit p: Parameters) extends CoreBundle()(p) with HasFPUCtrlSigs {
+class FPInput() extends CoreBundle() with HasFPUCtrlSigs {
   val rm = Bits(FPConstants.RM_SZ.W)
   val fmaCmd = Bits(2.W)
   val typ = Bits(2.W)
@@ -443,9 +443,9 @@ trait HasFPUParameters {
   }
 }
 
-abstract class FPUModule(implicit val p: Parameters) extends Module with HasCoreParameters with HasFPUParameters
+abstract class FPUModule() extends Module with HasRocketCoreParameters with HasFPUParameters
 
-class FPToInt(implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetimed {
+class FPToInt() extends FPUModule() with ShouldBeRetimed {
   class Output extends Bundle {
     val in = new FPInput
     val lt = Bool()
@@ -519,7 +519,7 @@ class FPToInt(implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetime
   io.out.bits.in := in
 }
 
-class IntToFP(val latency: Int)(implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetimed {
+class IntToFP(val latency: Int)() extends FPUModule() with ShouldBeRetimed {
   val io = IO(new Bundle {
     val in = Flipped(Valid(new IntToFPInput))
     val out = Valid(new FPResult)
@@ -564,7 +564,7 @@ class IntToFP(val latency: Int)(implicit p: Parameters) extends FPUModule()(p) w
   io.out <> Pipe(in.valid, mux, latency-1)
 }
 
-class FPToFP(val latency: Int)(implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetimed {
+class FPToFP(val latency: Int) extends FPUModule() with ShouldBeRetimed {
   val io = IO(new Bundle {
     val in = Flipped(Valid(new FPInput))
     val out = Valid(new FPResult)
@@ -687,8 +687,7 @@ class MulAddRecFNPipe(latency: Int, expWidth: Int, sigWidth: Int) extends Module
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 
-class FPUFMAPipe(val latency: Int, val t: FType)
-                (implicit p: Parameters) extends FPUModule()(p) with ShouldBeRetimed {
+class FPUFMAPipe(val latency: Int, val t: FType) extends FPUModule() with ShouldBeRetimed {
   require(latency>0)
 
   val io = IO(new Bundle {
@@ -724,17 +723,13 @@ class FPUFMAPipe(val latency: Int, val t: FType)
   io.out := Pipe(fma.io.validout, res, (latency-3) max 0)
 }
 
-class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
+class FPU(cfg: FPUParams) extends FPUModule() {
   val io = IO(new FPUIO)
 
-  val useClockGating = coreParams match {
-    case r: RocketCoreParams => r.clockGate
-    case _ => false
-  }
   val clock_en_reg = Reg(Bool())
   val clock_en = clock_en_reg || io.cp_req.valid
   val gated_clock =
-    if (!useClockGating) clock
+    if (!usingClockGating) clock
     else ClockGate(clock, clock_en, "fpu_clock_gate")
 
   val fp_decoder = Module(new FPUDecoder)
@@ -1004,7 +999,7 @@ class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
   }
 
   // gate the clock
-  clock_en_reg := !useClockGating.B ||
+  clock_en_reg := !usingClockGating.B ||
     io.keep_clock_enabled || // chicken bit
     io.valid || // ID stage
     req_valid || // EX stage
