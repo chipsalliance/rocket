@@ -14,12 +14,149 @@ import org.chipsalliance.rocket.Instructions64._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
 
-case class FPUParams(
-  minFLen: Int = 32,
-  fLen: Int = 64,
-  divSqrt: Boolean = true,
-  sfmaLatency: Int = 3,
-  dfmaLatency: Int = 4
+trait FPUParams(
+  val minFLen: Int = 32,
+  val fLen: Int = 64,
+  val divSqrt: Boolean = true,
+  val sfmaLatency: Int = 3,
+  val dfmaLatency: Int = 4
+  val minXLen = 32
+  val nIntTypes = log2Ceil(xLen/minXLen) + 1
+
+  require(fLen == 0 || FType.all.exists(_.ieeeWidth == fLen))
+
+  def floatTypes = FType.all.filter(t => minFLen <= t.ieeeWidth && t.ieeeWidth <= fLen)
+  def minType = floatTypes.head
+  def maxType = floatTypes.last
+  def prevType(t: FType) = floatTypes(typeTag(t) - 1)
+  def maxExpWidth = maxType.exp
+  def maxSigWidth = maxType.sig
+  def typeTag(t: FType) = floatTypes.indexOf(t)
+  def typeTagWbOffset = (FType.all.indexOf(minType) + 1).U
+  def typeTagGroup(t: FType) = (if (floatTypes.contains(t)) typeTag(t) else typeTag(maxType)).U
+  // typeTag
+  def H = typeTagGroup(FType.H)
+  def S = typeTagGroup(FType.S)
+  def D = typeTagGroup(FType.D)
+  def I = typeTag(maxType).U
+
+  private def isBox(x: UInt, t: FType): Bool = x(t.sig + t.exp, t.sig + t.exp - 4).andR
+
+  private def box(x: UInt, xt: FType, y: UInt, yt: FType): UInt = {
+    require(xt.ieeeWidth == 2 * yt.ieeeWidth)
+    val swizzledNaN = Cat(
+      x(xt.sig + xt.exp, xt.sig + xt.exp - 3),
+      x(xt.sig - 2, yt.recodedWidth - 1).andR,
+      x(xt.sig + xt.exp - 5, xt.sig),
+      y(yt.recodedWidth - 2),
+      x(xt.sig - 2, yt.recodedWidth - 1),
+      y(yt.recodedWidth - 1),
+      y(yt.recodedWidth - 3, 0))
+    Mux(xt.isNaN(x), swizzledNaN, x)
+  }
+
+  // implement NaN unboxing for FU inputs
+  def unbox(x: UInt, tag: UInt, exactType: Option[FType]): UInt = {
+    val outType = exactType.getOrElse(maxType)
+    def helper(x: UInt, t: FType): Seq[(Bool, UInt)] = {
+      val prev =
+        if (t == minType) {
+          Seq()
+        } else {
+          val prevT = prevType(t)
+          val unswizzled = Cat(
+            x(prevT.sig + prevT.exp - 1),
+            x(t.sig - 1),
+            x(prevT.sig + prevT.exp - 2, 0))
+          val prev = helper(unswizzled, prevT)
+          val isbox = isBox(x, t)
+          prev.map(p => (isbox && p._1, p._2))
+        }
+      prev :+ (true.B, t.unsafeConvert(x, outType))
+    }
+
+    val (oks, floats) = helper(x, maxType).unzip
+    if (exactType.isEmpty || floatTypes.size == 1) {
+      Mux(oks(tag), floats(tag), maxType.qNaN)
+    } else {
+      val t = exactType.get
+      floats(typeTag(t)) | Mux(oks(typeTag(t)), 0.U, t.qNaN)
+    }
+  }
+
+  // make sure that the redundant bits in the NaN-boxed encoding are consistent
+  def consistent(x: UInt): Bool = {
+    def helper(x: UInt, t: FType): Bool = if (typeTag(t) == 0) true.B else {
+      val prevT = prevType(t)
+      val unswizzled = Cat(
+        x(prevT.sig + prevT.exp - 1),
+        x(t.sig - 1),
+        x(prevT.sig + prevT.exp - 2, 0))
+      val prevOK = !isBox(x, t) || helper(unswizzled, prevT)
+      val curOK = !t.isNaN(x) || x(t.sig + t.exp - 4) === x(t.sig - 2, prevT.recodedWidth - 1).andR
+      prevOK && curOK
+    }
+    helper(x, maxType)
+  }
+
+  // generate a NaN box from an FU result
+  def box(x: UInt, t: FType): UInt = {
+    if (t == maxType) {
+      x
+    } else {
+      val nt = floatTypes(typeTag(t) + 1)
+      val bigger = box(((BigInt(1) << nt.recodedWidth)-1).U, nt, x, t)
+      bigger | ((BigInt(1) << maxType.recodedWidth) - (BigInt(1) << nt.recodedWidth)).U
+    }
+  }
+
+  // generate a NaN box from an FU result
+  def box(x: UInt, tag: UInt): UInt = {
+    val opts = floatTypes.map(t => box(x, t))
+    opts(tag)
+  }
+
+  // zap bits that hardfloat thinks are don't-cares, but we do care about
+  def sanitizeNaN(x: UInt, t: FType): UInt = {
+    if (typeTag(t) == 0) {
+      x
+    } else {
+      val maskedNaN = x & ~((BigInt(1) << (t.sig-1)) | (BigInt(1) << (t.sig+t.exp-4))).U(t.recodedWidth.W)
+      Mux(t.isNaN(x), maskedNaN, x)
+    }
+  }
+
+  // implement NaN boxing and recoding for FL*/fmv.*.x
+  def recode(x: UInt, tag: UInt): UInt = {
+    def helper(x: UInt, t: FType): UInt = {
+      if (typeTag(t) == 0) {
+        t.recode(x)
+      } else {
+        val prevT = prevType(t)
+        box(t.recode(x), t, helper(x, prevT), prevT)
+      }
+    }
+
+    // fill MSBs of subword loads to emulate a wider load of a NaN-boxed value
+    val boxes = floatTypes.map(t => ((BigInt(1) << maxType.ieeeWidth) - (BigInt(1) << t.ieeeWidth)).U)
+    helper(boxes(tag) | x, maxType)
+  }
+
+  // implement NaN unboxing and un-recoding for FS*/fmv.x.*
+  def ieee(x: UInt, t: FType = maxType): UInt = {
+    if (typeTag(t) == 0) {
+      t.ieee(x)
+    } else {
+      val unrecoded = t.ieee(x)
+      val prevT = prevType(t)
+      val prevRecoded = Cat(
+        x(prevT.recodedWidth-2),
+        x(t.sig-1),
+        x(prevT.recodedWidth-3, 0))
+      val prevUnrecoded = ieee(prevRecoded, prevT)
+      Cat(unrecoded >> prevT.ieeeWidth, Mux(t.isNaN(x), prevUnrecoded, unrecoded(prevT.ieeeWidth-1, 0)))
+    }
+  }
 )
 
 object FPConstants
@@ -442,7 +579,7 @@ trait HasFPUParameters {
   }
 }
 
-abstract class FPUModule() extends Module with HasRocketCoreParameters with HasFPUParameters
+abstract class FPUModule() extends Module with FPUParams
 
 class FPToInt() extends FPUModule() with ShouldBeRetimed {
   class Output extends Bundle {
