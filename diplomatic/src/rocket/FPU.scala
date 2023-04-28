@@ -306,7 +306,7 @@ class FPUDecoder(fLen: Int) extends Module with FPUParams {
   sigs zip decoder map {case(s,d) => s := d}
 }
 
-class FPUCoreIO(hartid: Int, xLen: Int, fLen: Int) extends Bundle {
+class FPUCoreIO(hartId: Int, xLen: Int, fLen: Int) extends Bundle {
   val hartid = Input(UInt(hartIdLen.W))
   val time = Input(UInt(xLen.W))
 
@@ -338,9 +338,9 @@ class FPUCoreIO(hartid: Int, xLen: Int, fLen: Int) extends Bundle {
   val keep_clock_enabled = Input(Bool())
 }
 
-class FPUIO() extends FPUCoreIO () {
-  val cp_req = Flipped(Decoupled(new FPInput())) //cp doesn't pay attn to kill sigs
-  val cp_resp = Decoupled(new FPResult())
+class FPUIO(hartId: Int, xLen: Int, fLen: Int) extends FPUCoreIO (hartId, xLen, fLen) {
+  val cp_req = Flipped(Decoupled(new FPInput(fLen))) //cp doesn't pay attn to kill sigs
+  val cp_resp = Decoupled(new FPResult(fLen))
 }
 
 class FPResult(fLen: Int) extends Bundle {
@@ -362,7 +362,6 @@ class FPInput(fLen: Int) extends Bundle with HasFPUCtrlSigs {
   val in1 = Bits((fLen+1).W)
   val in2 = Bits((fLen+1).W)
   val in3 = Bits((fLen+1).W)
-
 }
 
 case class FType(exp: Int, sig: Int) {
@@ -434,14 +433,14 @@ object FType {
 
 class FPToInt(xLen: Int, fLen: Int) extends Module with FPUParams with ShouldBeRetimed {
   class Output extends Bundle {
-    val in = new FPInput
+    val in = new FPInput(fLen)
     val lt = Bool()
     val store = Bits(fLen.W)
     val toint = Bits(xLen.W)
     val exc = Bits(FPConstants.FLAGS_SZ.W)
   }
   val io = IO(new Bundle {
-    val in = Flipped(Valid(new FPInput))
+    val in = Flipped(Valid(new FPInput(fLen)))
     val out = Valid(new Output)
   })
 
@@ -506,16 +505,16 @@ class FPToInt(xLen: Int, fLen: Int) extends Module with FPUParams with ShouldBeR
   io.out.bits.in := in
 }
 
-class IntToFP(val latency: Int, xLen: Int) extends Module with FPUParams with ShouldBeRetimed {
+class IntToFP(val latency: Int, xLen: Int, fLen: Int) extends Module with FPUParams with ShouldBeRetimed {
   val io = IO(new Bundle {
-    val in = Flipped(Valid(new IntToFPInput))
-    val out = Valid(new FPResult)
+    val in = Flipped(Valid(new IntToFPInput(xLen)))
+    val out = Valid(new FPResult(fLen))
   })
 
   val in = Pipe(io.in)
   val tag = in.bits.typeTagIn
 
-  val mux = Wire(new FPResult)
+  val mux = Wire(new FPResult(fLen))
   mux.exc := 0.U
   mux.data := recode(in.bits.in1, tag)
 
@@ -553,8 +552,8 @@ class IntToFP(val latency: Int, xLen: Int) extends Module with FPUParams with Sh
 
 class FPToFP(val latency: Int, fLen: Int) extends Module with FPUParams with ShouldBeRetimed {
   val io = IO(new Bundle {
-    val in = Flipped(Valid(new FPInput))
-    val out = Valid(new FPResult)
+    val in = Flipped(Valid(new FPInput(fLen)))
+    val out = Valid(new FPResult(fLen))
     val lt = Input(Bool()) // from FPToInt
   })
 
@@ -563,7 +562,7 @@ class FPToFP(val latency: Int, fLen: Int) extends Module with FPUParams with Sho
   val signNum = Mux(in.bits.rm(1), in.bits.in1 ^ in.bits.in2, Mux(in.bits.rm(0), ~in.bits.in2, in.bits.in2))
   val fsgnj = Cat(signNum(fLen), in.bits.in1(fLen-1, 0))
 
-  val fsgnjMux = Wire(new FPResult)
+  val fsgnjMux = Wire(new FPResult(fLen))
   fsgnjMux.exc := 0.U
   fsgnjMux.data := fsgnj
 
@@ -674,16 +673,16 @@ class MulAddRecFNPipe(latency: Int, expWidth: Int, sigWidth: Int) extends Module
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 
-class FPUFMAPipe(val latency: Int, val t: FType) extends Module with FPUParams with ShouldBeRetimed {
+class FPUFMAPipe(val latency: Int, val t: FType, fLen: Int) extends Module with FPUParams with ShouldBeRetimed {
   require(latency > 0)
 
   val io = IO(new Bundle {
-    val in = Flipped(Valid(new FPInput))
-    val out = Valid(new FPResult)
+    val in = Flipped(Valid(new FPInput(fLen)))
+    val out = Valid(new FPResult(fLen))
   })
 
   val valid = RegNext(io.in.valid)
-  val in = Reg(new FPInput)
+  val in = Reg(new FPInput(fLen))
   when (io.in.valid) {
     val one = 1.U << (t.sig + t.exp - 1)
     val zero = (io.in.bits.in1 ^ io.in.bits.in2) & (1.U << (t.sig + t.exp))
@@ -703,15 +702,15 @@ class FPUFMAPipe(val latency: Int, val t: FType) extends Module with FPUParams w
   fma.io.b := in.in2
   fma.io.c := in.in3
 
-  val res = Wire(new FPResult)
+  val res = Wire(new FPResult(fLen))
   res.data := sanitizeNaN(fma.io.out, t)
   res.exc := fma.io.exceptionFlags
 
   io.out := Pipe(fma.io.validout, res, (latency-3) max 0)
 }
 
-class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt: Boolean = true) extends Module with FPUParams {
-  val io = IO(new FPUIO)
+class FPU(hartId: Int, xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt: Boolean = true) extends Module with FPUParams {
+  val io = IO(new FPUIO(hartId, xLen, fLen))
 
   val clock_en_reg = Reg(Bool())
   val clock_en = clock_en_reg || io.cp_req.valid
@@ -719,7 +718,7 @@ class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt:
     if (!usingClockGating) clock
     else ClockGate(clock, clock_en, "fpu_clock_gate")
 
-  val fp_decoder = Module(new FPUDecoder)
+  val fp_decoder = Module(new FPUDecoder(fLen))
   fp_decoder.io.inst := io.inst
   val id_ctrl = fp_decoder.io.sigs
 
@@ -801,7 +800,7 @@ class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt:
   val ex_rm = Mux(ex_reg_inst(14,12) === 7.U, io.fcsr_rm, ex_reg_inst(14,12))
 
   def fuInput(minT: Option[FType]): FPInput = {
-    val req = Wire(new FPInput)
+    val req = Wire(new FPInput(fLen))
     val tag = ex_ctrl.typeTagIn
     req := ex_ctrl
     req.rm := ex_rm
@@ -821,7 +820,7 @@ class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt:
     req
   }
 
-  val sfma = Module(new FPUFMAPipe(sfmaLatency, FType.S))
+  val sfma = Module(new FPUFMAPipe(sfmaLatency, FType.S, fLen))
   sfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === S
   sfma.io.in.bits := fuInput(Some(sfma.t))
 
@@ -835,12 +834,12 @@ class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt:
     io.cp_resp.valid := true.B
   }
 
-  val ifpu = Module(new IntToFP(2))
+  val ifpu = Module(new IntToFP(2, xLen, fLen))
   ifpu.io.in.valid := req_valid && ex_ctrl.fromint
   ifpu.io.in.bits := fpiu.io.in.bits
   ifpu.io.in.bits.in1 := Mux(ex_cp_valid, io.cp_req.bits.in1, io.fromint_data)
 
-  val fpmu = Module(new FPToFP(2))
+  val fpmu = Module(new FPToFP(2, fLen))
   fpmu.io.in.valid := req_valid && ex_ctrl.fastpipe
   fpmu.io.in.bits := fpiu.io.in.bits
   fpmu.io.lt := fpiu.io.out.bits.lt
@@ -859,13 +858,13 @@ class FPU(xLen: Int, fLen: Int, usingClockGating: Boolean = false, usingDivSqrt:
     Pipe(ifpu, ifpu.latency, (c: FPUCtrlSigs) => c.fromint, ifpu.io.out.bits),
     Pipe(sfma, sfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === S, sfma.io.out.bits)) ++
     (fLen > 32).option({
-          val dfma = Module(new FPUFMAPipe(dfmaLatency, FType.D))
+          val dfma = Module(new FPUFMAPipe(dfmaLatency, FType.D, fLen))
           dfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === D
           dfma.io.in.bits := fuInput(Some(dfma.t))
           Pipe(dfma, dfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === D, dfma.io.out.bits)
         }) ++
     (minFLen == 16).option({
-          val hfma = Module(new FPUFMAPipe(sfmaLatency, FType.H))
+          val hfma = Module(new FPUFMAPipe(sfmaLatency, FType.H, fLen))
           hfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === H
           hfma.io.in.bits := fuInput(Some(hfma.t))
           Pipe(hfma, hfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === H, hfma.io.out.bits)
