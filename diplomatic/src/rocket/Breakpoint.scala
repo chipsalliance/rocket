@@ -4,16 +4,14 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Cat}
-import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile.{CoreBundle, HasCoreParameters}
-import freechips.rocketchip.util._
-
-class BPControl(implicit p: Parameters) extends CoreBundle()(p) {
+import org.chipsalliance.rocket.util._
+//todo: remove util
+class BPControl(xLen:Int, useBPWatch: Boolean) extends Bundle {
   val ttype = UInt(4.W)
   val dmode = Bool()
   val maskmax = UInt(6.W)
-  val reserved = UInt((xLen - (if (coreParams.useBPWatch) 26 else 24)).W)
-  val action = UInt((if (coreParams.useBPWatch) 3 else 1).W)
+  val reserved = UInt((xLen - (if (useBPWatch) 26 else 24)).W)
+  val action = UInt((if (useBPWatch) 3 else 1).W)
   val chain = Bool()
   val zero = UInt(2.W)
   val tmatch = UInt(2.W)
@@ -30,9 +28,9 @@ class BPControl(implicit p: Parameters) extends CoreBundle()(p) {
   def enabled(mstatus: MStatus) = !mstatus.debug && Cat(m, h, s, u)(mstatus.prv)
 }
 
-class TExtra(implicit p: Parameters) extends CoreBundle()(p) {
-  def mvalueBits: Int = if (xLen == 32) coreParams.mcontextWidth min  6 else coreParams.mcontextWidth min 13
-  def svalueBits: Int = if (xLen == 32) coreParams.scontextWidth min 16 else coreParams.scontextWidth min 34
+class TExtra(xLen:Int, mcontextWidth:Int, scontextWidth:Int) extends Bundle {
+  def mvalueBits: Int = if (xLen == 32) mcontextWidth min  6 else mcontextWidth min 13
+  def svalueBits: Int = if (xLen == 32) scontextWidth min 16 else scontextWidth min 34
   def mselectPos: Int = if (xLen == 32) 25 else 50
   def mvaluePos : Int = mselectPos + 1
   def sselectPos: Int = 0
@@ -46,14 +44,14 @@ class TExtra(implicit p: Parameters) extends CoreBundle()(p) {
   val sselect = Bool()
 }
 
-class BP(implicit p: Parameters) extends CoreBundle()(p) {
-  val control = new BPControl
+class BP(xLen:Int, mcontextWidth:Int, scontextWidth:Int,useBPWatch: Boolean, vaddrBits:Int) extends Bundle {
+  val control = new BPControl(xLen,useBPWatch)
   val address = UInt(vaddrBits.W)
-  val textra  = new TExtra
+  val textra  = new TExtra(xLen, mcontextWidth, scontextWidth)
 
   def contextMatch(mcontext: UInt, scontext: UInt) =
-    (if (coreParams.mcontextWidth > 0) (!textra.mselect || (mcontext(textra.mvalueBits-1,0) === textra.mvalue)) else true.B) &&
-    (if (coreParams.scontextWidth > 0) (!textra.sselect || (scontext(textra.svalueBits-1,0) === textra.svalue)) else true.B)
+    (if (mcontextWidth > 0) (!textra.mselect || (mcontext(textra.mvalueBits-1,0) === textra.mvalue)) else true.B) &&
+    (if (scontextWidth > 0) (!textra.sselect || (scontext(textra.svalueBits-1,0) === textra.svalue)) else true.B)
 
   def mask(dummy: Int = 0) =
     (0 until control.maskMax-1).scanLeft(control.tmatch(0))((m, i) => m && address(i)).asUInt
@@ -76,14 +74,14 @@ class BPWatch (val n: Int) extends Bundle() {
   val action = UInt(3.W)
 }
 
-class BreakpointUnit(n: Int)(implicit val p: Parameters) extends Module with HasCoreParameters {
+class BreakpointUnit(n: Int,xLen:Int, mcontextWidth:Int, scontextWidth:Int,useBPWatch: Boolean, vaddrBits:Int) extends Module  {
   val io = IO(new Bundle {
     val status = Input(new MStatus())
-    val bp = Input(Vec(n, new BP))
+    val bp = Input(Vec(n, new BP(xLen, mcontextWidth, scontextWidth ,useBPWatch, vaddrBits)))
     val pc = Input(UInt(vaddrBits.W))
     val ea = Input(UInt(vaddrBits.W))
-    val mcontext = Input(UInt(coreParams.mcontextWidth.W))
-    val scontext = Input(UInt(coreParams.scontextWidth.W))
+    val mcontext = Input(UInt(mcontextWidth.W))
+    val scontext = Input(UInt(scontextWidth.W))
     val xcpt_if  = Output(Bool())
     val xcpt_ld  = Output(Bool())
     val xcpt_st  = Output(Bool())

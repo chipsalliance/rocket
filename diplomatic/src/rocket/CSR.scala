@@ -278,7 +278,7 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   val rocc_interrupt = Input(Bool())
   val interrupt = Output(Bool())
   val interrupt_cause = Output(UInt(xLen.W))
-  val bp = Output(Vec(nBreakpoints, new BP))
+  val bp = Output(Vec(nBreakpoints, new BP(p(XLen),coreParams.mcontextWidth, coreParams.scontextWidth,coreParams.useBPWatch, vaddrBits )))
   val pmp = Output(Vec(nPMPs, new PMP))
   val counters = Vec(nPerfCounters, new PerfCounterIO)
   val csrw_counter = Output(UInt(CSR.nCtr.W))
@@ -458,7 +458,7 @@ class CSRFile(
   val reg_scontext = (coreParams.scontextWidth > 0).option(RegInit(0.U(coreParams.scontextWidth.W)))
 
   val reg_tselect = Reg(UInt(log2Up(nBreakpoints).W))
-  val reg_bp = Reg(Vec(1 << log2Up(nBreakpoints), new BP))
+  val reg_bp = Reg(Vec(1 << log2Up(nBreakpoints), new BP(p(XLen),coreParams.mcontextWidth, coreParams.scontextWidth,coreParams.useBPWatch, vaddrBits )))
   val reg_pmp = Reg(Vec(nPMPs, new PMPReg))
 
   val reg_mie = Reg(UInt(xLen.W))
@@ -1512,7 +1512,7 @@ class CSRFile(
     if (coreParams.scontextWidth == 0) bpx.sselect := false.B
   }
   for (bp <- reg_bp drop nBreakpoints)
-    bp := 0.U.asTypeOf(new BP())
+    bp := 0.U.asTypeOf(new BP(p(XLen),coreParams.mcontextWidth, coreParams.scontextWidth,coreParams.useBPWatch, vaddrBits ))
   for (pmp <- reg_pmp) {
     pmp.cfg.res := 0.U
     when (reset.asBool) { pmp.reset() }
