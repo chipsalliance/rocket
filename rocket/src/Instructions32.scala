@@ -1,8 +1,6 @@
 // See LICENSE.SiFive for license details.
 // See LICENSE.Berkeley for license details.
-
 package org.chipsalliance.rocket
-
 import chisel3.util._
 
 /* make EXTENSIONS="rv32*" inst.chisel */

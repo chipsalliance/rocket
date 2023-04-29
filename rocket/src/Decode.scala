@@ -1,7 +1,5 @@
 // See LICENSE.Berkeley for license details.
-
 package org.chipsalliance.rocket
-
 import chisel3._
 import chisel3.util.BitPat
 import chisel3.util.experimental.decode._

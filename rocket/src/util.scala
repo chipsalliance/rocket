@@ -187,4 +187,6 @@ package object util {
     def ##(y: Option[UInt]): Option[UInt] = x.map(_ ## y)
   }
 
+  implicit def uintToBitPat(x: UInt): BitPat = BitPat(x)
+
 }
