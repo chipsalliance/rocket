@@ -20,8 +20,8 @@ class PMPConfig extends Bundle {
 object PMP {
   def lgAlign = 2
 
-  def apply(reg: PMPReg): PMP = {
-    val pmp = Wire(new PMP()(reg.p))
+  def apply(reg: PMPReg, paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int): PMP = {
+    val pmp = Wire(new PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int))
     pmp.cfg := reg.cfg
     pmp.addr := reg.addr
     pmp.mask := pmp.computeMask
@@ -29,7 +29,7 @@ object PMP {
   }
 }
 
-class PMPReg(implicit p: Parameters) extends CoreBundle()(p) {
+class PMPReg(paddrBits: Int, pmpGranularity: Int) extends Bundle {
   val cfg = new PMPConfig
   val addr = UInt((paddrBits - PMP.lgAlign).W)
 
@@ -49,7 +49,7 @@ class PMPReg(implicit p: Parameters) extends CoreBundle()(p) {
   def addrLocked(next: PMPReg) = cfgLocked || next.cfgLocked && next.tor
 }
 
-class PMP(implicit p: Parameters) extends PMPReg {
+class PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) extends PMPReg(paddrBits, pmpGranularity) {
   val mask = UInt(paddrBits.W)
 
   import PMP._
@@ -132,19 +132,18 @@ class PMP(implicit p: Parameters) extends PMPReg {
     Mux(napot, pow2Match(x, lgSize, lgMaxSize), torNotNAPOT && rangeMatch(x, lgSize, lgMaxSize, prev))
 }
 
-class PMPHomogeneityChecker(pmps: Seq[PMP])(implicit p: Parameters) {
+class PMPHomogeneityChecker(pmps: Seq[PMP], paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) {
   def apply(addr: UInt, pgLevel: UInt): Bool = {
-    pmps.foldLeft((true.B, 0.U.asTypeOf(new PMP))) { case ((h, prev), pmp) =>
+    pmps.foldLeft((true.B, 0.U.asTypeOf(new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))) { case ((h, prev), pmp) =>
       (h && pmp.homogeneous(addr, pgLevel, prev), pmp)
     }._1
   }
 }
 
-class PMPChecker(lgMaxSize: Int)(implicit val p: Parameters) extends Module
-    with HasCoreParameters {
+class PMPChecker(lgMaxSize: Int, paddrBits: Int, pmpGranularity: Int, nPMPs: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) extends Module {
   val io = IO(new Bundle {
     val prv = Input(UInt(PRV.SZ.W))
-    val pmp = Input(Vec(nPMPs, new PMP))
+    val pmp = Input(Vec(nPMPs, new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
     val addr = Input(UInt(paddrBits.W))
     val size = Input(UInt(log2Ceil(lgMaxSize + 1).W))
     val r = Output(Bool())
@@ -153,7 +152,7 @@ class PMPChecker(lgMaxSize: Int)(implicit val p: Parameters) extends Module
   })
 
   val default = if (io.pmp.isEmpty) true.B else io.prv > PRV.S.U
-  val pmp0 = WireInit(0.U.asTypeOf(new PMP))
+  val pmp0 = WireInit(0.U.asTypeOf(new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
   pmp0.cfg.r := default
   pmp0.cfg.w := default
   pmp0.cfg.x := default
