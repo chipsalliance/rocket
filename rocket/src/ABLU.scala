@@ -4,8 +4,6 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile.CoreModule
 
 // These are for the ABLU unit, which uses an alternate function encoding
 class ABLUFN extends ALUFN
@@ -153,7 +151,7 @@ object ABLUFN {
   def apply() = new ABLUFN
 }
 
-class ABLU(implicit p: Parameters) extends AbstractALU(new ABLUFN)(p) {
+class ABLU(SZ_DW: Int, xLen: Int, DW_64: UInt, usingBitManipCrypto: Boolean) extends AbstractALU(new ABLUFN, SZ_DW, xLen) {
   val isSub = aluFn.isSub(io.fn)
   val isIn2Inv = aluFn.isIn2Inv(io.fn)
   val isZBS = aluFn.isZBS(io.fn)

@@ -415,8 +415,8 @@ class Rocket(tile: RocketTile)(implicit p: Parameters) extends CoreModule()(p)
     A2_SIZE -> Mux(ex_reg_rvc, 2.S, 4.S)))
 
   val alu = Module(aluFn match {
-    case _: ABLUFN => new ABLU
-    case _: ALUFN => new ALU
+    case _: ABLUFN => new ABLU(SZ_DW, xLen, DW_64, usingBitManipCrypto)
+    case _: ALUFN => new ALU(SZ_DW, xLen, DW_64, DW_32)
   })
   alu.io.dw := ex_ctrl.alu_dw
   alu.io.fn := ex_ctrl.alu_fn
