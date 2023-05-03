@@ -7,7 +7,6 @@ import chisel3._
 import chisel3.util._
 import chisel3.{DontCare, WireInit, withClock, withReset}
 import chisel3.internal.sourceinfo.SourceInfo
-import org.chipsalliance.cde.config.Parameters
 import org.chipsalliance.rocket._
 import org.chipsalliance.rocket.Instructions._
 import org.chipsalliance.rocket.Instructions64._
@@ -1000,5 +999,5 @@ class FPU(hartId: Int, xLen: Int, fLen: Int, usingClockGating: Boolean, usingDiv
   val fpuImpl = withClock (gated_clock) { new FPUImpl }
 
   def ccover(cond: Bool, label: String, desc: String)(implicit sourceInfo: SourceInfo) =
-    property.cover(cond, s"FPU_$label", "Core;;" + desc)
+    cover(cond, s"FPU_$label Core;; $desc")
 }
