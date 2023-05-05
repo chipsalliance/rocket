@@ -35,7 +35,7 @@ case object VMIdBits extends Field[Int](0)
   * If rs1!=x0 and rs2!=x0, the fence orders only reads and writes made to the leaf page table entry corresponding to the virtual address in rs1, for the address space identified by integer register rs2. Accesses to global mappings are not ordered.
   * }}}
   */
-class SFenceReq(implicit p: Parameters) extends CoreBundle()(p) {
+class SFenceReq extends Bundle {
   val rs1 = Bool()
   val rs2 = Bool()
   val addr = UInt(vaddrBits.W)
@@ -44,7 +44,7 @@ class SFenceReq(implicit p: Parameters) extends CoreBundle()(p) {
   val hg = Bool()
 }
 
-class TLBReq(lgMaxSize: Int)(implicit p: Parameters) extends CoreBundle()(p) {
+class TLBReq(lgMaxSize: Int) extends Bundle {
   /** request address from CPU. */
   val vaddr = UInt(vaddrBitsExtended.W)
   /** don't lookup TLB, bypass vaddr as paddr */
@@ -65,7 +65,7 @@ class TLBExceptions extends Bundle {
   val inst = Bool()
 }
 
-class TLBResp(implicit p: Parameters) extends CoreBundle()(p) {
+class TLBResp extends Bundle {
   // lookup responses
   val miss = Bool()
   /** physical address */
@@ -88,7 +88,7 @@ class TLBResp(implicit p: Parameters) extends CoreBundle()(p) {
   val prefetchable = Bool()
 }
 
-class TLBEntryData(implicit p: Parameters) extends CoreBundle()(p) {
+class TLBEntryData extends Bundle {
   val ppn = UInt(ppnBits.W)
   /** pte.u user */
   val u = Bool()
@@ -138,7 +138,7 @@ class TLBEntryData(implicit p: Parameters) extends CoreBundle()(p) {
 }
 
 /** basic cell for TLB data */
-class TLBEntry(val nSectors: Int, val superpage: Boolean, val superpageOnly: Boolean)(implicit p: Parameters) extends CoreBundle()(p) {
+class TLBEntry(val nSectors: Int, val superpage: Boolean, val superpageOnly: Boolean) extends Bundle {
   require(nSectors == 1 || !superpage)
   require(!superpageOnly || superpage)
 
@@ -304,7 +304,7 @@ case class TLBConfig(
   * @param cfg [[TLBConfig]]
   * @param edge collect SoC metadata.
   */
-class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(p) {
+class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig, edge: TLEdgeOut) extends Module {
   val io = IO(new Bundle {
     /** request from Core */
     val req = Flipped(Decoupled(new TLBReq(lgMaxSize)))
