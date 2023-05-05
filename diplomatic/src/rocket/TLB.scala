@@ -11,10 +11,11 @@ import freechips.rocketchip.subsystem.CacheBlockBytes
 import freechips.rocketchip.diplomacy.RegionType
 import freechips.rocketchip.tile.{CoreModule, CoreBundle}
 import freechips.rocketchip.tilelink._
-import freechips.rocketchip.util._
-import freechips.rocketchip.util.property
+// import freechips.rocketchip.util._
+// import freechips.rocketchip.util.property
 import freechips.rocketchip.devices.debug.DebugModuleKey
 import chisel3.internal.sourceinfo.SourceInfo
+import org.chipsalliance.rocket.constants.MemoryOpConstants
 
 case object PgLevels extends Field[Int](2)
 case object ASIdBits extends Field[Int](0)
@@ -35,7 +36,7 @@ case object VMIdBits extends Field[Int](0)
   * If rs1!=x0 and rs2!=x0, the fence orders only reads and writes made to the leaf page table entry corresponding to the virtual address in rs1, for the address space identified by integer register rs2. Accesses to global mappings are not ordered.
   * }}}
   */
-class SFenceReq extends Bundle {
+class SFenceReq(vaddrBits: Int, asIdBits: Int) extends Bundle {
   val rs1 = Bool()
   val rs2 = Bool()
   val addr = UInt(vaddrBits.W)
@@ -44,7 +45,7 @@ class SFenceReq extends Bundle {
   val hg = Bool()
 }
 
-class TLBReq(lgMaxSize: Int) extends Bundle {
+class TLBReq(lgMaxSize: Int, vaddrBitsExtended: Int) extends Bundle with MemoryOpConstants {
   /** request address from CPU. */
   val vaddr = UInt(vaddrBitsExtended.W)
   /** don't lookup TLB, bypass vaddr as paddr */
@@ -65,7 +66,7 @@ class TLBExceptions extends Bundle {
   val inst = Bool()
 }
 
-class TLBResp extends Bundle {
+class TLBResp(paddrBits: Int, vaddrBitsExtended: Int) extends Bundle {
   // lookup responses
   val miss = Bool()
   /** physical address */
@@ -88,7 +89,7 @@ class TLBResp extends Bundle {
   val prefetchable = Bool()
 }
 
-class TLBEntryData extends Bundle {
+class TLBEntryData(ppnBits: Int) extends Bundle {
   val ppn = UInt(ppnBits.W)
   /** pte.u user */
   val u = Bool()
@@ -138,7 +139,15 @@ class TLBEntryData extends Bundle {
 }
 
 /** basic cell for TLB data */
-class TLBEntry(val nSectors: Int, val superpage: Boolean, val superpageOnly: Boolean) extends Bundle {
+class TLBEntry(
+  val nSectors: Int,
+  val superpage: Boolean,
+  val superpageOnly: Boolean,
+  pgLevels: Int,
+  pgLevelBits: Int,
+  vpnBits: Int,
+  hypervisorExtraAddrBits: Int,
+  usingVM: Boolean) extends Bundle {
   require(nSectors == 1 || !superpage)
   require(!superpageOnly || superpage)
 
@@ -304,7 +313,27 @@ case class TLBConfig(
   * @param cfg [[TLBConfig]]
   * @param edge collect SoC metadata.
   */
-class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig, edge: TLEdgeOut) extends Module {
+class TLB(
+  instruction: Boolean,
+  lgMaxSize: Int,
+  cfg: TLBConfig,
+  edge: TLEdgeOut,
+  pmpGranularity: Int,
+  pgLevels: Int,
+  minPgLevels: Int,
+  pgLevelBits: Int,
+  pgIdxBits: Int,
+  vpnBits: Int,
+  vaddrBits: Int,
+  vaddrBitsExtended: Int,
+  hypervisorExtraAddrBits: Int,
+  xLen: Int,
+  usingHypervisor: Boolean,
+  usingVM: Boolean,
+  usingAtomics: Boolean,
+  usingAtomicsInCache: Boolean,
+  usingAtomicsOnlyForIO: Boolean,
+  usingDataScratchpad: Boolean) extends Module with MemoryOpConstants {
   val io = IO(new Bundle {
     /** request from Core */
     val req = Flipped(Decoupled(new TLBReq(lgMaxSize)))
@@ -413,7 +442,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig, edge: TLEdgeOut)
     legal_address && edge.manager.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B)
   // todo: using DataScratchpad doesn't support cacheable.
   val cacheable = fastCheck(_.supportsAcquireB) && (instruction || !usingDataScratchpad).B
-  val homogeneous = TLBPageLookup(edge.manager.managers, xLen, p(CacheBlockBytes), BigInt(1) << pgIdxBits)(mpu_physaddr).homogeneous
+  val homogeneous = TLBPageLookup(edge.manager.managers, xLen, p(CacheBlockBytes), BigInt(1) << pgIdxBits)(mpu_physaddr).homogeneous // TODO: Remove `p`
   // In M mode, if access DM address(debug module program buffer)
   val deny_access_to_debug = mpu_priv <= PRV.M.U && p(DebugModuleKey).map(dmp => dmp.address.contains(mpu_physaddr)).getOrElse(false.B)
   val prot_r = fastCheck(_.supportsGet) && !deny_access_to_debug && pmp.io.r
