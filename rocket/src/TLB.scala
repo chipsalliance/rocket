@@ -146,6 +146,7 @@ class TLBEntry(
   pgLevels: Int,
   pgLevelBits: Int,
   vpnBits: Int,
+  ppnBits: Int,
   hypervisorExtraAddrBits: Int,
   usingVM: Boolean) extends Bundle {
   require(nSectors == 1 || !superpage)
@@ -157,15 +158,15 @@ class TLBEntry(
   /** tag in vitualization mode */
   val tag_v = Bool()
   /** entry data */
-  val data = Vec(nSectors, UInt(new TLBEntryData().getWidth.W))
+  val data = Vec(nSectors, UInt(new TLBEntryData(ppnBits).getWidth.W))
   /** valid bit */
   val valid = Vec(nSectors, Bool())
   /** returns all entry data in this entry */
-  def entry_data = data.map(_.asTypeOf(new TLBEntryData))
+  def entry_data = data.map(_.asTypeOf(new TLBEntryData(ppnBits)))
   /** returns the index of sector */
   private def sectorIdx(vpn: UInt) = vpn.extract(nSectors.log2-1, 0)
   /** returns the entry data matched with this vpn*/
-  def getData(vpn: UInt) = OptimizationBarrier(data(sectorIdx(vpn)).asTypeOf(new TLBEntryData))
+  def getData(vpn: UInt) = OptimizationBarrier(data(sectorIdx(vpn)).asTypeOf(new TLBEntryData(ppnBits)))
   /** returns whether a sector hits */
   def sectorHit(vpn: UInt, virtual: Bool) = valid.orR && sectorTagMatch(vpn, virtual)
   /** returns whether tag matches vpn */
@@ -324,9 +325,12 @@ class TLB(
   pgLevelBits: Int,
   pgIdxBits: Int,
   vpnBits: Int,
+  ppnBits: Int,
   vaddrBits: Int,
   vaddrBitsExtended: Int,
+  paddrBits: Int,
   hypervisorExtraAddrBits: Int,
+  asIdBits: Int,
   xLen: Int,
   usingHypervisor: Boolean,
   usingVM: Boolean,
@@ -336,13 +340,13 @@ class TLB(
   usingDataScratchpad: Boolean) extends Module with MemoryOpConstants {
   val io = IO(new Bundle {
     /** request from Core */
-    val req = Flipped(Decoupled(new TLBReq(lgMaxSize)))
+    val req = Flipped(Decoupled(new TLBReq(lgMaxSize, vaddrBitsExtended)))
     /** response to Core */
-    val resp = Output(new TLBResp())
+    val resp = Output(new TLBResp(paddrBits, vaddrBitsExtended))
     /** SFence Input */
-    val sfence = Flipped(Valid(new SFenceReq))
+    val sfence = Flipped(Valid((new SFenceReq(vaddrBits, asIdBits))))
     /** IO to PTW */
-    val ptw = new TLBPTWIO
+    val ptw = new TLBPTWIO()
     /** suppress a TLB refill, one cycle after a miss */
     val kill = Input(Bool())
   })
@@ -352,14 +356,14 @@ class TLB(
   /** index for sectored_Entry */
   val memIdx = vpn.extract(cfg.nSectors.log2 + cfg.nSets.log2 - 1, cfg.nSectors.log2)
   /** TLB Entry */
-  val sectored_entries = Reg(Vec(cfg.nSets, Vec(cfg.nWays / cfg.nSectors, new TLBEntry(cfg.nSectors, false, false))))
+  val sectored_entries = Reg(Vec(cfg.nSets, Vec(cfg.nWays / cfg.nSectors, new TLBEntry(cfg.nSectors, false, false, pgLevels, pgLevelBits, vpnBits, ppnBits, hypervisorExtraAddrBits, usingVM))))
   /** Superpage Entry */
-  val superpage_entries = Reg(Vec(cfg.nSuperpageEntries, new TLBEntry(1, true, true)))
+  val superpage_entries = Reg(Vec(cfg.nSuperpageEntries, new TLBEntry(1, true, true, pgLevels, pgLevelBits, vpnBits, ppnBits, hypervisorExtraAddrBits, usingVM)))
   /** Special Entry
     *
     * If PMP granularity is less than page size, thus need additional "special" entry manage PMP.
     */
-  val special_entry = (!pageGranularityPMPs).option(Reg(new TLBEntry(1, true, false)))
+  val special_entry = (!pageGranularityPMPs).option(Reg(new TLBEntry(1, true, false, pgLevels, pgLevelBits, vpnBits, ppnBits, hypervisorExtraAddrBits, usingVM)))
   def ordinary_entries = sectored_entries(memIdx) ++ superpage_entries
   def all_entries = ordinary_entries ++ special_entry
   def all_real_entries = sectored_entries.flatten ++ superpage_entries ++ special_entry
@@ -465,7 +469,7 @@ class TLB(
   when (do_refill) {
     val pte = io.ptw.resp.bits.pte
     val refill_v = r_vstage1_en || r_stage2_en
-    val newEntry = Wire(new TLBEntryData)
+    val newEntry = Wire(new TLBEntryData(ppnBits))
     newEntry.ppn := pte.ppn
     newEntry.c := cacheable
     newEntry.u := pte.u
