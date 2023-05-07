@@ -11,8 +11,6 @@ import freechips.rocketchip.subsystem.CacheBlockBytes
 import freechips.rocketchip.diplomacy.RegionType
 import freechips.rocketchip.tile.{CoreModule, CoreBundle}
 import freechips.rocketchip.tilelink._
-// import freechips.rocketchip.util._
-// import freechips.rocketchip.util.property
 import freechips.rocketchip.devices.debug.DebugModuleKey
 import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket.constants.MemoryOpConstants
@@ -332,6 +330,7 @@ class TLB(
   hypervisorExtraAddrBits: Int,
   asIdBits: Int,
   xLen: Int,
+  cacheBlockBytes: Int,
   usingHypervisor: Boolean,
   usingVM: Boolean,
   usingAtomics: Boolean,
@@ -446,7 +445,7 @@ class TLB(
     legal_address && edge.manager.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B)
   // todo: using DataScratchpad doesn't support cacheable.
   val cacheable = fastCheck(_.supportsAcquireB) && (instruction || !usingDataScratchpad).B
-  val homogeneous = TLBPageLookup(edge.manager.managers, xLen, p(CacheBlockBytes), BigInt(1) << pgIdxBits)(mpu_physaddr).homogeneous // TODO: Remove `p`
+  val homogeneous = TLBPageLookup(edge.manager.managers, xLen, cacheBlockBytes, BigInt(1) << pgIdxBits)(mpu_physaddr).homogeneous
   // In M mode, if access DM address(debug module program buffer)
   val deny_access_to_debug = mpu_priv <= PRV.M.U && p(DebugModuleKey).map(dmp => dmp.address.contains(mpu_physaddr)).getOrElse(false.B)
   val prot_r = fastCheck(_.supportsGet) && !deny_access_to_debug && pmp.io.r
@@ -764,7 +763,7 @@ class TLB(
   }
 
   def ccover(cond: Bool, label: String, desc: String)(implicit sourceInfo: SourceInfo) =
-    property.cover(cond, s"${if (instruction) "I" else "D"}TLB_$label", "MemorySystem;;" + desc)
+    cover(cond, s"${if (instruction) "I" else "D"}TLB_$label MemorySystem;; $desc")
   /** Decides which entry to be replaced
     *
     * If there is a invalid entry, replace it with priorityencoder;
