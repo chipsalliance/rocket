@@ -6,6 +6,7 @@ import chisel3._
 import chisel3.util.{Cat}
 import org.chipsalliance.rocket.util._
 
+//todo: remove this
 object PRV
 {
   val SZ = 2
@@ -14,7 +15,7 @@ object PRV
   val H = 2
   val M = 3
 }
-
+//todo: remove this
 class MStatus extends Bundle {
   // not truly part of mstatus, but convenient
   val debug = Bool()
