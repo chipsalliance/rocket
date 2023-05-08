@@ -97,10 +97,10 @@ class TExtra(xLen:Int, mcontextWidth:Int, scontextWidth:Int) extends Bundle {
   val sselect = Bool()
 }
 
-class BP(xLen:Int, mcontextWidth:Int, scontextWidth:Int,useBPWatch: Boolean, vaddrBits:Int) extends Bundle {
-  val control = new BPControl(xLen,useBPWatch)
+class BP(xLen: Int, mcontextWidth: Int, scontextWidth: Int, useBPWatch: Boolean, vaddrBits: Int) extends Bundle {
+  val control = new BPControl(xLen, useBPWatch)
   val address = UInt(vaddrBits.W)
-  val textra  = new TExtra(xLen, mcontextWidth, scontextWidth)
+  val textra = new TExtra(xLen, mcontextWidth, scontextWidth)
 
   def contextMatch(mcontext: UInt, scontext: UInt) =
     (if (mcontextWidth > 0) (!textra.mselect || (mcontext(textra.mvalueBits-1,0) === textra.mvalue)) else true.B) &&
@@ -127,10 +127,10 @@ class BPWatch (val n: Int) extends Bundle() {
   val action = UInt(3.W)
 }
 
-class BreakpointUnit(n: Int,xLen:Int, mcontextWidth:Int, scontextWidth:Int,useBPWatch: Boolean, vaddrBits:Int) extends Module  {
+class BreakpointUnit(n: Int, xLen: Int, mcontextWidth: Int, scontextWidth: Int, useBPWatch: Boolean, vaddrBits: Int) extends Module {
   val io = IO(new Bundle {
     val status = Input(new MStatus())
-    val bp = Input(Vec(n, new BP(xLen, mcontextWidth, scontextWidth ,useBPWatch, vaddrBits)))
+    val bp = Input(Vec(n, new BP(xLen, mcontextWidth, scontextWidth, useBPWatch, vaddrBits)))
     val pc = Input(UInt(vaddrBits.W))
     val ea = Input(UInt(vaddrBits.W))
     val mcontext = Input(UInt(mcontextWidth.W))
