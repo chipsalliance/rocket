@@ -1,5 +1,7 @@
 // See LICENSE.SiFive for license details.
+
 package org.chipsalliance.rocket
+
 import chisel3._
 import chisel3.util.{BitPat, HasBlackBoxInline}
 import chisel3.experimental.fromIntToIntParam
