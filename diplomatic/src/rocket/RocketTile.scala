@@ -3,7 +3,7 @@
 
 package org.chipsalliance.rockettile
 
-import Chisel._
+import chisel3._
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.devices.tilelink._
 import freechips.rocketchip.diplomacy._
