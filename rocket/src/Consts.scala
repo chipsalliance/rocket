@@ -4,9 +4,8 @@ package org.chipsalliance.rocket.constants
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.util._
 
-trait ScalarOpConstants {
+object ScalarOpConstants {
   val SZ_BR = 3
   def BR_X    = BitPat("b???")
   def BR_EQ   = 0.U(3.W)
@@ -48,7 +47,7 @@ trait ScalarOpConstants {
   def DW_XPR = DW_64
 }
 
-trait MemoryOpConstants {
+object MemoryOpConstants {
   val NUM_XA_OPS = 9
   val M_SZ      = 5
   def M_X       = BitPat("b?????");
