@@ -43,7 +43,7 @@ class SFenceReq(vaddrBits: Int, asIdBits: Int) extends Bundle {
   val hg = Bool()
 }
 
-class TLBReq(lgMaxSize: Int, vaddrBitsExtended: Int) extends Bundle with MemoryOpConstants {
+class TLBReq(lgMaxSize: Int, vaddrBitsExtended: Int) extends Bundle {
   /** request address from CPU. */
   val vaddr = UInt(vaddrBitsExtended.W)
   /** don't lookup TLB, bypass vaddr as paddr */
@@ -51,7 +51,7 @@ class TLBReq(lgMaxSize: Int, vaddrBitsExtended: Int) extends Bundle with MemoryO
   /** granularity */
   val size = UInt(log2Ceil(lgMaxSize + 1).W)
   /** memory command. */
-  val cmd  = Bits(M_SZ.W)
+  val cmd  = Bits(MemoryOpConstants.M_SZ.W)
   val prv = UInt(PRV.SZ.W)
   /** virtualization mode */
   val v = Bool()
@@ -336,7 +336,7 @@ class TLB(
   usingAtomics: Boolean,
   usingAtomicsInCache: Boolean,
   usingAtomicsOnlyForIO: Boolean,
-  usingDataScratchpad: Boolean) extends Module with MemoryOpConstants {
+  usingDataScratchpad: Boolean) extends Module {
   val io = IO(new Bundle {
     /** request from Core */
     val req = Flipped(Decoupled(new TLBReq(lgMaxSize, vaddrBitsExtended)))
@@ -345,7 +345,7 @@ class TLB(
     /** SFence Input */
     val sfence = Flipped(Valid((new SFenceReq(vaddrBits, asIdBits))))
     /** IO to PTW */
-    val ptw = new TLBPTWIO()
+    val ptw = new TLBPTWIO() // TODO: Dependent on PTW
     /** suppress a TLB refill, one cycle after a miss */
     val kill = Input(Bool())
   })
@@ -588,13 +588,13 @@ class TLB(
     if (!usingVM || (minPgLevels == pgLevels && vaddrBits == vaddrBitsExtended)) false.B
     else vm_enabled && stage1_en && badVA(false)
 
-  val cmd_lrsc = usingAtomics.B && io.req.bits.cmd.isOneOf(M_XLR, M_XSC)
-  val cmd_amo_logical = usingAtomics.B && isAMOLogical(io.req.bits.cmd)
-  val cmd_amo_arithmetic = usingAtomics.B && isAMOArithmetic(io.req.bits.cmd)
-  val cmd_put_partial = io.req.bits.cmd === M_PWR
-  val cmd_read = isRead(io.req.bits.cmd)
-  val cmd_readx = usingHypervisor.B && io.req.bits.cmd === M_HLVX
-  val cmd_write = isWrite(io.req.bits.cmd)
+  val cmd_lrsc = usingAtomics.B && io.req.bits.cmd.isOneOf(MemoryOpConstants.M_XLR, MemoryOpConstants.M_XSC)
+  val cmd_amo_logical = usingAtomics.B && MemoryOpConstants.isAMOLogical(io.req.bits.cmd)
+  val cmd_amo_arithmetic = usingAtomics.B && MemoryOpConstants.isAMOArithmetic(io.req.bits.cmd)
+  val cmd_put_partial = io.req.bits.cmd === MemoryOpConstants.M_PWR
+  val cmd_read = MemoryOpConstants.isRead(io.req.bits.cmd)
+  val cmd_readx = usingHypervisor.B && io.req.bits.cmd === MemoryOpConstants.M_HLVX
+  val cmd_write = MemoryOpConstants.isWrite(io.req.bits.cmd)
   val cmd_write_perms = cmd_write ||
     io.req.bits.cmd.isOneOf(M_FLUSH_ALL, M_WOK) // not a write, but needs write permissions
 
