@@ -349,7 +349,7 @@ class Rocket(tile: RocketTile)(implicit p: Parameters) extends CoreModule()(p)
   val id_do_fence = WireDefault(id_rocc_busy && id_ctrl.fence ||
     id_mem_busy && (id_ctrl.amo && id_amo_rl || id_ctrl.fence_i || id_reg_fence && (id_ctrl.mem || id_ctrl.rocc)))
 
-  val bpu = Module(new BreakpointUnit(nBreakpoints))
+  val bpu = Module(new BreakpointUnit(nBreakpoints,p(XLen),coreParams.mcontextWidth, coreParams.scontextWidth,coreParams.useBPWatch, vaddrBits ))
   bpu.io.status := csr.io.status
   bpu.io.bp := csr.io.bp
   bpu.io.pc := ibuf.io.pc
