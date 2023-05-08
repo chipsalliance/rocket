@@ -15,10 +15,6 @@ import freechips.rocketchip.devices.debug.DebugModuleKey
 import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket.constants.MemoryOpConstants
 
-case object PgLevels extends Field[Int](2)
-case object ASIdBits extends Field[Int](0)
-case object VMIdBits extends Field[Int](0)
-
 /** =SFENCE=
   * rs1 rs2
   * {{{

@@ -5,8 +5,6 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{BitPat, Cat, Fill, Mux1H, PopCount, PriorityMux, RegEnable, UIntToOH, Valid, log2Ceil, log2Up}
-import org.chipsalliance.cde.config.Parameters
-import org.chipsalliance.rockettile._
 
 import scala.collection.mutable.LinkedHashMap
 // import Instructions._
