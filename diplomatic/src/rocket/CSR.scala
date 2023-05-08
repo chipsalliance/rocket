@@ -141,15 +141,6 @@ class PTBR(implicit p: Parameters) extends CoreBundle()(p) {
   val ppn = UInt((maxPAddrBits - pgIdxBits).W)
 }
 
-object PRV
-{
-  val SZ = 2
-  val U = 0
-  val S = 1
-  val H = 2
-  val M = 3
-}
-
 object CSR
 {
   // commands
@@ -587,7 +578,7 @@ class CSRFile(
   io.bp := reg_bp take nBreakpoints
   io.mcontext := reg_mcontext.getOrElse(0.U)
   io.scontext := reg_scontext.getOrElse(0.U)
-  io.pmp := reg_pmp.map(PMP(_,paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits))
+  io.pmp := reg_pmp.map(PMP(_, paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits))
 
   val isaMaskString =
     (if (usingMulDiv) "M" else "") +

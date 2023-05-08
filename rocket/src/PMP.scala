@@ -171,17 +171,17 @@ class PMPChecker(lgMaxSize: Int, paddrBits: Int, pmpGranularity: Int, nPMPs: Int
     val aligned = pmp.aligned(io.addr, io.size, lgMaxSize, prevPMP)
 
     for ((name, idx) <- Seq("no", "TOR", if (pmpGranularity <= 4) "NA4" else "", "NAPOT").zipWithIndex; if name.nonEmpty)
-      property.cover(pmp.cfg.a === idx.U, s"The cfg access is set to ${name} access ", "Cover PMP access mode setting")
+      cover(pmp.cfg.a === idx.U, s"The cfg access is set to ${name} access Cover PMP access mode setting")
 
-    property.cover(pmp.cfg.l === 0x1.U, s"The cfg lock is set to high ", "Cover PMP lock mode setting")
+    cover(pmp.cfg.l === 0x1.U, s"The cfg lock is set to high Cover PMP lock mode setting")
    
     // Not including Write and no Read permission as the combination is reserved
     for ((name, idx) <- Seq("no", "RO", "", "RW", "X", "RX", "", "RWX").zipWithIndex; if name.nonEmpty)
-      property.cover((Cat(pmp.cfg.x, pmp.cfg.w, pmp.cfg.r) === idx.U), s"The permission is set to ${name} access ", "Cover PMP access permission setting")
+      cover((Cat(pmp.cfg.x, pmp.cfg.w, pmp.cfg.r) === idx.U), s"The permission is set to ${name} access Cover PMP access permission setting")
 
     for ((name, idx) <- Seq("", "TOR", if (pmpGranularity <= 4) "NA4" else "", "NAPOT").zipWithIndex; if name.nonEmpty) {
-      property.cover(!ignore && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode ", "Cover PMP access")
-      property.cover(pmp.cfg.l && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode with lock bit high", "Cover PMP access with lock bit")
+      cover(!ignore && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode Cover PMP access")
+      cover(pmp.cfg.l && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode with lock bit high Cover PMP access with lock bit")
     }
 
     val cur = WireInit(pmp)

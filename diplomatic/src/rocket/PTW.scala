@@ -547,7 +547,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
     }
   }
   val pmaHomogeneous = pmaPgLevelHomogeneous(count)
-  val pmpHomogeneous = new PMPHomogeneityChecker(io.dpath.pmp,paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits).apply(r_pte.ppn << pgIdxBits, count)
+    val pmpHomogeneous = new PMPHomogeneityChecker(io.dpath.pmp, paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits).apply(r_pte.ppn << pgIdxBits, count)
   val homogeneous = pmaHomogeneous && pmpHomogeneous
   // response to tlb
   for (i <- 0 until io.requestor.size) {
