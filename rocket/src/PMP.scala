@@ -4,9 +4,17 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Cat, log2Ceil}
-import org.chipsalliance.cde.config._
-import org.chipsalliance.rockettile._
-import freechips.rocketchip.util._
+import org.chipsalliance.rocket.util._
+
+//todo:remove this
+object PRV
+{
+  val SZ = 2
+  val U = 0
+  val S = 1
+  val H = 2
+  val M = 3
+}
 
 class PMPConfig extends Bundle {
   val l = Bool()
