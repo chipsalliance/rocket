@@ -5,9 +5,6 @@ package org.chipsalliance.rocket
 import chisel3._
 import chisel3.util.isPow2
 
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tilelink._
-
 case class TLBPermissions(
   homogeneous: Bool, // if false, the below are undefined
   r: Bool, // readable
