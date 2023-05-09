@@ -118,8 +118,6 @@ private:
     // methods for TL channel
     void receive_tl_req();
 
-    void return_tl_response();
-
     void record_rf_access(CommitPeekInterface cmInterface);
 
     int beforeReturnAquire;
