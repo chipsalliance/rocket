@@ -30,14 +30,7 @@ class FrontendExceptions extends Bundle {
   }
 }
 
-class FrontendResp(BTBParams: BTBParams,vaddrBits:Int,vaddrBitsExtended:Int,fetchWidth:Int,coreInstBits:Int) extends Bundle {
-  val btb = new BTBResp(BTBParams,fetchWidth,vaddrBits)
-  val pc = UInt(vaddrBitsExtended.W)  // ID stage PC
-  val data = UInt((fetchWidth * coreInstBits).W)
-  val mask = Bits(fetchWidth.W)
-  val xcpt = new FrontendExceptions
-  val replay = Bool()
-}
+
 
 class FrontendPerfEvents extends Bundle {
   val acquire = Bool()
