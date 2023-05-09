@@ -75,8 +75,6 @@ trait HasNonDiplomaticTileParameters {
   lazy val maxPAddrBits: Int = {
     require(xLen == 32 || xLen == 64, s"Only XLENs of 32 or 64 are supported, but got $xLen")
     xLen match { case 32 => 34; case 64 => 56 }
-
-
   }
 
   /** Use staticIdForMetadataUseOnly to emit information during the build or identify a component to diplomacy.
