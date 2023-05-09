@@ -8,7 +8,6 @@ import chisel3.util._
 import org.chipsalliance.rocket.util._
 import org.chipsalliance.rocket.util.property._
 
-
 case class BHTParams(
   nEntries: Int = 512,
   counterLength: Int = 1,
@@ -43,7 +42,7 @@ class RAS(nras: Int) {
   private val stack = Reg(Vec(nras, UInt()))
 }
 
-class BHTResp(bhtParams:Option[BHTParams]) extends Bundle {
+class BHTResp(bhtParams: Option[BHTParams]) extends Bundle {
   val history = UInt(bhtParams.map(_.historyLength).getOrElse(1).W)
   val value = UInt(bhtParams.map(_.counterLength).getOrElse(1).W)
   def taken = value(0)
@@ -59,7 +58,7 @@ class BHTResp(bhtParams:Option[BHTParams]) extends Bundle {
 //    - each counter corresponds with the address of the fetch packet ("fetch pc").
 //    - updated when a branch resolves (and BTB was a hit for that branch).
 //      The updating branch must provide its "fetch pc".
-class BHT(params: BHTParams,fetchBytes:Int) extends Bundle {
+class BHT(params: BHTParams, fetchBytes: Int) extends Bundle {
   def index(addr: UInt, history: UInt) = {
     def hashHistory(hist: UInt) = if (params.historyLength == params.historyBits) hist else {
       val k = math.sqrt(3)/2
@@ -122,8 +121,8 @@ object CFIType {
 // BTB update occurs during branch resolution (and only on a mispredict).
 //  - "pc" is what future fetch PCs will tag match against.
 //  - "br_pc" is the PC of the branch instruction.
-class BTBUpdate(btbParams:BTBParams,fetchWidth:Int,vaddrBits:Int) extends Bundle {
-  val prediction = new BTBResp(btbParams,fetchWidth,vaddrBits)
+class BTBUpdate(btbParams: BTBParams, fetchWidth: Int, vaddrBits: Int) extends Bundle {
+  val prediction = new BTBResp(btbParams, fetchWidth, vaddrBits)
   val pc = UInt(vaddrBits.W)
   val target = UInt(vaddrBits.W)
   val taken = Bool()
@@ -134,7 +133,7 @@ class BTBUpdate(btbParams:BTBParams,fetchWidth:Int,vaddrBits:Int) extends Bundle
 
 // BHT update occurs during branch resolution on all conditional branches.
 //  - "pc" is what future fetch PCs will tag match against.
-class BHTUpdate(btbParams:BTBParams,vaddrBits:Int) extends Bundle {
+class BHTUpdate(btbParams: BTBParams, vaddrBits: Int) extends Bundle {
   val prediction = new BHTResp(btbParams.bhtParams)
   val pc = UInt(vaddrBits.W)
   val branch = Bool()
@@ -142,7 +141,7 @@ class BHTUpdate(btbParams:BTBParams,vaddrBits:Int) extends Bundle {
   val mispredict = Bool()
 }
 
-class RASUpdate(vaddrBits:Int) extends Bundle {
+class RASUpdate(vaddrBits: Int) extends Bundle {
   val cfiType = CFIType()
   val returnAddr = UInt(vaddrBits.W)
 }
@@ -151,7 +150,7 @@ class RASUpdate(vaddrBits:Int) extends Bundle {
 //     shifting off the lowest log(inst_bytes) bits off).
 //  - "mask" provides a mask of valid instructions (instructions are
 //     masked off by the predicted taken branch from the BTB).
-class BTBResp(btbparams: BTBParams,fetchWidth:Int,vaddrBits:Int) extends Bundle {
+class BTBResp(btbparams: BTBParams, fetchWidth: Int, vaddrBits: Int) extends Bundle {
   val cfiType = CFIType()
   val taken = Bool()
   val mask = Bits(fetchWidth.W)
@@ -161,21 +160,21 @@ class BTBResp(btbparams: BTBParams,fetchWidth:Int,vaddrBits:Int) extends Bundle 
   val bht = new BHTResp(btbparams.bhtParams)
 }
 
-class BTBReq(vaddrBits:Int) extends Bundle {
-   val addr = UInt(vaddrBits.W)
+class BTBReq(vaddrBits: Int) extends Bundle {
+  val addr = UInt(vaddrBits.W)
 }
 
 // fully-associative branch target buffer
 // Higher-performance processors may cause BTB updates to occur out-of-order,
 // which requires an extra CAM port for updates (to ensure no duplicates get
 // placed in BTB).
-class BTB(btbParams: BTBParams,fetchBytes:Int,fetchWidth:Int,vaddrBits:Int,matchBits:Int,coreInstBytes:Int) extends Module {
+class BTB(btbParams: BTBParams, fetchBytes: Int, fetchWidth: Int, vaddrBits: Int, matchBits: Int, coreInstBytes: Int) extends Module {
   val io = IO(new Bundle {
     val req = Flipped(Valid(new BTBReq(vaddrBits)))
-    val resp = Valid(new BTBResp(btbParams,fetchWidth,vaddrBits))
-    val btb_update = Flipped(Valid(new BTBUpdate(btbParams,fetchWidth,vaddrBits)))
-    val bht_update = Flipped(Valid(new BHTUpdate(btbParams,vaddrBits)))
-    val bht_advance = Flipped(Valid(new BTBResp(btbParams,fetchWidth,vaddrBits)))
+    val resp = Valid(new BTBResp(btbParams, fetchWidth, vaddrBits))
+    val btb_update = Flipped(Valid(new BTBUpdate(btbParams, fetchWidth, vaddrBits)))
+    val bht_update = Flipped(Valid(new BHTUpdate(btbParams, vaddrBits)))
+    val bht_advance = Flipped(Valid(new BTBResp(btbParams, fetchWidth, vaddrBits)))
     val ras_update = Flipped(Valid(new RASUpdate(vaddrBits)))
     val ras_head = Valid(UInt(vaddrBits.W))
     val flush = Input(Bool())

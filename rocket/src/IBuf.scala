@@ -39,13 +39,13 @@ class Instruction(coreInstBits:Int, usingCompressed:Boolean) extends Bundle {
   require(coreInstBits == (if (usingCompressed) 16 else 32))
 }
 
-class IBuf(coreInstBits:Int, usingCompressed:Boolean,vaddrBits:Int,vaddrBitsExtended:Int,retireWidth:Int,decodeWidth:Int,
-           fetchWidth:Int,coreInstBytes:Int,BTBParams: BTBParams,xlen:Int) extends Module {
+class IBuf(coreInstBits: Int, usingCompressed: Boolean, vaddrBits: Int, vaddrBitsExtended: Int, retireWidth: Int, decodeWidth: Int,
+           fetchWidth: Int, coreInstBytes: Int, BTBParams: BTBParams, xlen: Int) extends Module {
   val io = IO(new Bundle {
-    val imem = Flipped(Decoupled(new FrontendResp(BTBParams,vaddrBits,vaddrBitsExtended,fetchWidth, coreInstBits)))
+    val imem = Flipped(Decoupled(new FrontendResp(BTBParams, vaddrBits, vaddrBitsExtended, fetchWidth, coreInstBits)))
     val kill = Input(Bool())
     val pc = Output(UInt(vaddrBitsExtended.W))
-    val btb_resp = Output(new BTBResp(BTBParams,fetchWidth,vaddrBits))
+    val btb_resp = Output(new BTBResp(BTBParams, fetchWidth, vaddrBits))
     val inst = Vec(retireWidth, Decoupled(new Instruction(coreInstBits, usingCompressed)))
   })
 
@@ -55,7 +55,7 @@ class IBuf(coreInstBits:Int, usingCompressed:Boolean,vaddrBits:Int,vaddrBitsExte
   val n = fetchWidth - 1
   val nBufValid = if (n == 0) 0.U else RegInit(init=0.U(log2Ceil(fetchWidth).W))
   val buf = Reg(chiselTypeOf(io.imem.bits))
-  val ibufBTBResp = Reg(new BTBResp(BTBParams,fetchWidth,vaddrBits))
+  val ibufBTBResp = Reg(new BTBResp(BTBParams, fetchWidth, vaddrBits))
   val pcWordMask = (coreInstBytes*fetchWidth-1).U(vaddrBitsExtended.W)
 
   val pcWordBits = io.imem.bits.pc.extract(log2Ceil(fetchWidth*coreInstBytes)-1, log2Ceil(coreInstBytes))
@@ -105,7 +105,7 @@ class IBuf(coreInstBits:Int, usingCompressed:Boolean,vaddrBits:Int,vaddrBitsExte
   expand(0, 0.U, inst)
 
   def expand(i: Int, j: UInt, curInst: UInt): Unit = if (i < retireWidth) {
-    val exp = Module(new RVCExpander(usingCompressed=usingCompressed,XLen=xlen))
+    val exp = Module(new RVCExpander(usingCompressed = usingCompressed, XLen = xlen))
     exp.io.in := curInst
     io.inst(i).bits.inst := exp.io.out
     io.inst(i).bits.raw := curInst
