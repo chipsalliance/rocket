@@ -13,12 +13,12 @@ import org.chipsalliance.cde.config.{Config, Field}
 import freechips.rocketchip.diplomacy._
 import org.chipsalliance.tilelink.bundle._
 
-class TestBench extends RawModule {
+class TestBench(config: cosimConfig) extends RawModule {
   val clock = Wire(Clock())
   val reset = Wire(Bool())
   val dut = withClockAndReset(clock, reset) {
     Module(
-      new DUT(new cosimConfig)
+      new DUT(config)
     )
   }
   val verificationModule = Module(new VerificationModule(dut))

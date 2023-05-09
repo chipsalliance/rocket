@@ -20,6 +20,7 @@ object v {
   val scala = "2.13.10"
   val mainargs = ivy"com.lihaoyi::mainargs:0.3.0"
   val osLib = ivy"com.lihaoyi::os-lib:latest.integration"
+  val upickle = ivy"com.lihaoyi::upickle:0.7.1"
 }
 
 object myfirrtl extends dependencies.firrtl.build.firrtlCrossModule(v.scala) {
@@ -140,7 +141,8 @@ object cosim extends Module {
     override def ivyDeps = T {
       Seq(
         v.mainargs,
-        v.osLib
+        v.osLib,
+        v.upickle
       )
     }
 
@@ -153,6 +155,7 @@ object cosim extends Module {
         runClasspath().map(_.path),
         Seq(
           "--dir", T.dest.toString,
+          "--xlen","64"
         ),
       )
       PathRef(T.dest)
