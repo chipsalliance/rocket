@@ -1,5 +1,5 @@
 {
-  description = "rocket-chip";
+  description = "rocket";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

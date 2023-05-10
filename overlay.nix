@@ -146,54 +146,5 @@ in
     };
   };
 
-  circt = final.stdenv.mkDerivation {
-    pname = "circt";
-    version = "r4396.ce85204ca";
-    nativeBuildInputs = with final; [ cmake ninja python3 git ];
-    src = final.fetchFromGitHub {
-      owner = "llvm";
-      repo = "circt";
-      rev = "6937e9b8b5e2a525f043ab89eb16812f92b42c62";
-      sha256 = "sha256-Lpu8J9izWvtYqibJQV0xEldk406PJobUM9WvTmNS3g4=";
-      fetchSubmodules = true;
-    };
-    cmakeFlags = [
-      "-S/build/source/llvm/llvm"
-      "-DLLVM_ENABLE_PROJECTS=mlir"
-      "-DBUILD_SHARED_LIBS=OFF"
-      "-DLLVM_STATIC_LINK_CXX_STDLIB=ON"
-      "-DLLVM_ENABLE_ASSERTIONS=ON"
-      "-DLLVM_BUILD_EXAMPLES=OFF"
-      "-DLLVM_ENABLE_BINDINGS=OFF"
-      "-DLLVM_ENABLE_OCAMLDOC=OFF"
-      "-DLLVM_OPTIMIZED_TABLEGEN=ON"
-      "-DLLVM_EXTERNAL_PROJECTS=circt"
-      "-DLLVM_EXTERNAL_CIRCT_SOURCE_DIR=/build/source"
-      "-DLLVM_BUILD_TOOLS=ON"
-    ];
-    installPhase = ''
-      mkdir -p $out/bin
-      mv bin/firtool $out/bin/firtool
-    '';
-  };
-
-  verilator = prev.verilator.overrideAttrs (old: {
-    version = "5.008";
-
-    src = final.fetchFromGitHub {
-      owner = "verilator";
-      repo = "verilator";
-      rev = "21093fd1bd36fed8943f67868ddc8f75f41e4488";
-      sha256 = "sha256-+eJBGvQOk5w+PyUF3aieuXZVeKNS4cKQqHnJibKwFnM=";
-     };
-
-    nativeBuildInputs = with final; [ flex bison python3 autoconf help2man ];
-
-    postPatch = ''
-        patchShebangs bin/* src/{flexfix,vlcovgen} test_regress/{driver.pl,t/*.pl}
-    '';
-
-  });
-
   mill = prev.mill.override { jre = final.openjdk17; };
 }
