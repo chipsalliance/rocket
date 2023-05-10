@@ -8,6 +8,7 @@ import chisel3.util._
 
 import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket.constants.MemoryOpConstants
+import org.chipsalliance.rocket.util._
 
 /** =SFENCE=
   * rs1 rs2
@@ -306,7 +307,7 @@ class TLB(
   instruction: Boolean,
   lgMaxSize: Int,
   cfg: TLBConfig,
-  edge: TLEdgeOut,
+  edge: TLEdgeOut, // TODO: Decoupled from Tilelink
   pmpGranularity: Int,
   pgLevels: Int,
   minPgLevels: Int,
@@ -431,7 +432,7 @@ class TLB(
   // check exist a slave can consume this address.
   val legal_address = edge.manager.findSafe(mpu_physaddr).reduce(_||_)
   // check utility to help check SoC property.
-  def fastCheck(member: TLManagerParameters => Boolean) =
+  def fastCheck(member: TLManagerParameters => Boolean) = // TODO: Decoupled from Tilelink
     legal_address && edge.manager.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B)
   // todo: using DataScratchpad doesn't support cacheable.
   val cacheable = fastCheck(_.supportsAcquireB) && (instruction || !usingDataScratchpad).B
