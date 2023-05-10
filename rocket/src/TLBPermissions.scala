@@ -27,7 +27,7 @@ object TLBPageLookup
     val useful = r || w || x || c || a || l
   }
 
-  private def groupRegions(managers: Seq[TLManagerParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = {
+  private def groupRegions(managers: Seq[TLManagerParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = { // TODO: Decoupled from Tilelink
     val permissions = managers.map { m =>
       (m.address, TLBFixedPermissions(
         e = Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains m.regionType,
