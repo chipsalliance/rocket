@@ -11,11 +11,11 @@ import upickle.default._
 
 object Main {
   @main def elaborate(@arg(name = "dir") dir: String, @arg("xlen") xlen: Int) = {
-q    val config = ujson.Arr(
+    val config = ujson.Arr(
       ujson.Obj("xlen" -> xlen),
     )
     os.remove(os.pwd/ "out" /"config.json")
-    os.write(os.pwd/ "out" /"config.json",ujson.write(config, indent = 4))
+    os.write.append(os.pwd/ "out" /"config.json",ujson.write(config, indent = 4))
 
     var topName: String = null
     val annos: AnnotationSeq = Seq(

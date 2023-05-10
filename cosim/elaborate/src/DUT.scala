@@ -7,10 +7,10 @@ import freechips.rocketchip.interrupts.{IntSinkNode, IntSinkPortSimple, IntSourc
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.tilelink.{TLManagerNode, TLSlaveParameters, TLSlavePortParameters}
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.tile.{NMI, PriorityMuxHartIdFromSeq, RocketTile}
 import org.chipsalliance.tilelink.bundle._
-import org.chipsalliance.cde.config.{Config, Field}
 import freechips.rocketchip.diplomacy._
+import org.chipsalliance.rockettile._
+
 
 class DUT(p: Parameters) extends Module {
   implicit val implicitP = p
