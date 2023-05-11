@@ -23,7 +23,7 @@ object Main {
       new chisel3.tests.elaborate.Convert
     ).foldLeft(
       Seq(
-        ChiselGeneratorAnnotation(() => new TestBench(cosimConfig(xlen)) )
+        ChiselGeneratorAnnotation(() => new TestBench(xlen) )
       ): AnnotationSeq
     ) { case (annos, stage) => stage.transform(annos) }
       .flatMap {

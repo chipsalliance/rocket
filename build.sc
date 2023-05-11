@@ -125,6 +125,7 @@ object diplomatic extends common.DiplomaticModule {
 }
 
 object cosim extends Module {
+  val xLen = 32
   object elaborate extends ScalaModule with ScalafmtModule {
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
@@ -155,7 +156,7 @@ object cosim extends Module {
         runClasspath().map(_.path),
         Seq(
           "--dir", T.dest.toString,
-          "--xlen","64"
+          "--xlen",s"$xLen"
         ),
       )
       PathRef(T.dest)
@@ -328,6 +329,8 @@ object cases extends Module {
       Lib.findSourceFiles(sources(), Seq("S", "s", "c", "cpp")).map(PathRef(_))
     }
 
+    def xlen: Int = 64
+
     def linkScript: T[PathRef] = T {
       os.write(T.ctx.dest / "linker.ld",
         s"""
@@ -341,7 +344,7 @@ object cases extends Module {
     }
 
     def compile: T[PathRef] = T {
-      os.proc(Seq("clang-rv64", "-o", name() + ".elf", "--target=riscv64", "-march=rv64gc", "-mno-relax", s"-T${linkScript().path}") ++ allSourceFiles().map(_.path.toString)).call(T.ctx.dest)
+      os.proc(Seq(s"clang-rv${xlen}", "-o", name() + ".elf", s"--target=riscv${xlen}", s"-march=rv${xlen}gc", "-mno-relax", s"-T${linkScript().path}") ++ allSourceFiles().map(_.path.toString)).call(T.ctx.dest)
       os.proc(Seq("llvm-objcopy", "-O", "binary", "--only-section=.text", name() + ".elf", name())).call(T.ctx.dest)
       T.log.info(s"${name()} is generated in ${T.dest},\n")
       PathRef(T.ctx.dest / name())
@@ -362,7 +365,11 @@ object cases extends Module {
     }
   }
 
-  object entrance extends Case
+  object entrance64 extends Case
+
+  object entrance32 extends Case {
+    override def xlen = 32
+  }
 
   object riscvtests extends Module {
 
@@ -518,6 +525,12 @@ object cases extends Module {
           os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv64mi-p-csr")).filterNot(p => p.last.endsWith("rv64mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv64um")).filterNot(p => p.last.startsWith("rv64ui-v")).filterNot(p => p.last.startsWith("rv64uf-v")).filterNot(p => p.last.startsWith("rv64ua-v")).filterNot(p => p.last.startsWith("rv64uzfh-v")).filterNot(p => p.last.startsWith("rv64ud-v")).filterNot(p => p.last.startsWith("rv64uc-v")).map(PathRef(_))
         }
       }
+
+      object `rv32` extends Suite {
+        override def binaries = T {
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p => p.last.endsWith("rv32mi-p-scall")).map(PathRef(_))
+        }
+      }
     }
   }
 }
@@ -532,7 +545,7 @@ object tests extends Module() {
 
         val runEnv = Map(
           "COSIM_bin" -> bin.path.toString(),
-          "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
+          "COSIM_entrance_bin" -> cases.entrance64.compile().path.toString,
           "COSIM_wave" -> (T.dest / "wave").toString,
           "COSIM_reset_vector" -> "80000000",
         )
@@ -554,9 +567,10 @@ object tests extends Module() {
       def run(args: String*) = T.command {
         bin().map { c =>
           val name = c.path.last
+          val entrancePath = if(cosim.xLen==64) cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
           val runEnv = Map(
             "COSIM_bin" -> c.path.toString,
-            "COSIM_entrance_bin" -> cases.entrance.compile().path.toString,
+            "COSIM_entrance_bin" -> entrancePath,
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "20000",
@@ -584,6 +598,10 @@ object tests extends Module() {
 
     object `rv64` extends Test {
       def bin = cases.riscvtests.test.`rv64`.binaries
+    }
+
+    object `rv32` extends Test {
+      def bin = cases.riscvtests.test.`rv32`.binaries
     }
 
     object `rv64si-p` extends Test {

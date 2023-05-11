@@ -31,7 +31,8 @@ class DUT(p: Parameters) extends Module {
         supportsLogical = TransferSizes(1, 64),
         supportsArithmetic = TransferSizes(1, 64),
         fifoId = Some(0))),
-      beatBytes = 8,
+      //todo: config with xlen
+      beatBytes = 4,
       endSinkId = 4,
       minLatency = 1
     )))
@@ -79,11 +80,11 @@ class DUT(p: Parameters) extends Module {
       nmiNode.makeIO()
     }
   })
-
-  val tlAParam = TileLinkChannelAParameter(32,2,64,3)
-  val tlBParam = TileLinkChannelBParameter(32,2,64,3)
-  val tlCParam = TileLinkChannelCParameter(32,2,64,3)
-  val tlDParam = TileLinkChannelDParameter(2,3,64,3)
+  //todo: config databits with xlen
+  val tlAParam = TileLinkChannelAParameter(32,2,32,3)
+  val tlBParam = TileLinkChannelBParameter(32,2,32,3)
+  val tlCParam = TileLinkChannelCParameter(32,2,32,3)
+  val tlDParam = TileLinkChannelDParameter(2,3,32,3)
   val tlEParam = TileLinkChannelEParameter(2)
 
   val memory_0_a = IO(Decoupled(new TLChannelA(tlAParam)))

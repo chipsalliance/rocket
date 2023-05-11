@@ -3,6 +3,74 @@ final: prev:
 let
   myLLVM = final.llvmPackages_14;  # do not get into nixpkgs namespace
 
+  rv32-compilerrt = let
+      pname = "rv-compilerrt";
+      version = myLLVM.llvm.version;
+      src = final.fetchFromGitHub {
+        owner = "llvm";
+        repo = "llvm-project";
+        rev = version;
+        sha256 = "sha256-vffu4HilvYwtzwgq+NlS26m65DGbp6OSSne2aje1yJE=";
+      };
+    in
+      final.llvmPackages_14.stdenv.mkDerivation {
+        sourceRoot = "${src.name}/compiler-rt";
+        inherit src version pname;
+        nativeBuildInputs = [ final.cmake final.python3 final.glibc_multi ];
+        cmakeFlags = [
+            "-DCOMPILER_RT_BUILD_LIBFUZZER=OFF"
+            "-DCOMPILER_RT_BUILD_SANITIZERS=OFF"
+            "-DCOMPILER_RT_BUILD_PROFILE=OFF"
+            "-DCOMPILER_RT_BUILD_MEMPROF=OFF"
+            "-DCOMPILER_RT_BUILD_ORC=OFF"
+            "-DCOMPILER_RT_BUILD_BUILTINS=ON"
+            "-DCOMPILER_RT_BAREMETAL_BUILD=ON"
+            "-DCOMPILER_RT_INCLUDE_TESTS=OFF"
+            "-DCOMPILER_RT_HAS_FPIC_FLAG=OFF"
+            "-DCOMPILER_RT_DEFAULT_TARGET_ONLY=On"
+            "-DCOMPILER_RT_OS_DIR=riscv32"
+            "-DCMAKE_BUILD_TYPE=Release"
+            "-DCMAKE_SYSTEM_NAME=Generic"
+            "-DCMAKE_SYSTEM_PROCESSOR=riscv32"
+            "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY"
+            "-DCMAKE_SIZEOF_VOID_P=8"
+            "-DCMAKE_ASM_COMPILER_TARGET=riscv32-none-elf"
+            "-DCMAKE_C_COMPILER_TARGET=riscv32-none-elf"
+            "-DCMAKE_C_COMPILER_WORKS=ON"
+            "-DCMAKE_CXX_COMPILER_WORKS=ON"
+            "-DCMAKE_C_COMPILER=clang"
+            "-DCMAKE_CXX_COMPILER=clang++"
+            "-Wno-dev"
+        ];
+        CMAKE_C_FLAGS = "-nodefaultlibs -fno-exceptions -mno-relax -Wno-macro-redefined -fPIC";
+      };
+
+    rv32-musl = let
+      pname = "musl";
+      version = "a167b20fd395a45603b2d36cbf96dcb99ccedd60";
+      src = final.fetchFromGitHub {
+        owner = "sequencer";
+        repo = "musl";
+        rev = "a167b20fd395a45603b2d36cbf96dcb99ccedd60";
+        sha256 = "sha256-kFOTlJ5ka5h694EBbwNkM5TLHlFg6uJsY7DK5ImQ8mY=";
+      };
+    in
+      final.llvmPackages_14.stdenv.mkDerivation {
+        inherit src pname version;
+        nativeBuildInputs = [ final.llvmPackages_14.bintools ];
+        configureFlags = [
+          "--target=riscv32-none-elf"
+          "--enable-static"
+          "--syslibdir=${placeholder "out"}/lib"
+        ];
+        LIBCC = "-lclang_rt.builtins-riscv32";
+        CFLAGS = "--target=riscv32 -mno-relax -nostdinc";
+        LDFLAGS = "-fuse-ld=lld --target=riscv32 -nostdlib -L${rv32-compilerrt}/lib/riscv32";
+        dontDisableStatic = true;
+        dontAddStaticConfigureFlags = true;
+        NIX_DONT_SET_RPATH = true;
+      };
+
   rv64-compilerrt = let
     pname = "rv-compilerrt";
     version = myLLVM.llvm.version;
@@ -86,6 +154,10 @@ let
     EOF
   '';
 
+  rv32-clang = final.writeShellScriptBin "clang-rv32" ''
+       ${my-cc-wrapper}/bin/clang --target=riscv32 -fuse-ld=lld -L${rv32-compilerrt}/lib/riscv32 -L${rv32-musl}/lib "$@"
+     '';
+
   rv64-clang = final.writeShellScriptBin "clang-rv64" ''
     ${my-cc-wrapper}/bin/clang --target=riscv64 -fuse-ld=lld -L${rv64-compilerrt}/lib/riscv64 -L${rv64-musl}/lib "$@"
   '';
@@ -132,7 +204,7 @@ let
     };
 in
 {
-  inherit myLLVM rv64-compilerrt rv64-musl rv64-clang my-cc-wrapper libspike;
+  inherit myLLVM rv64-compilerrt rv64-musl rv64-clang my-cc-wrapper libspike rv32-compilerrt rv32-musl rv32-clang;
 
   espresso = final.stdenv.mkDerivation rec {
     pname = "espresso";

@@ -32,6 +32,9 @@ test:
 riscvtests:
 	mill -i -j 0 tests.riscvtests.rv64
 
+riscv32tests:
+	mill -i -j 0 tests.riscvtests.rv32
+
 smoketest:
 	mill -i -j 0 tests.smoketest.smoketest
 

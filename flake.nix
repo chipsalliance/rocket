@@ -16,6 +16,7 @@
         pkgs = import nixpkgs { inherit system; overlays = [ overlay ]; };
         deps = with pkgs; [
           rv64-clang
+          rv32-clang
           myLLVM.bintools
 
           cmake

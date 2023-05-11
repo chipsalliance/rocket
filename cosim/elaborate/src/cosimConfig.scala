@@ -18,7 +18,8 @@ case class cosimConfig(xLength: Int) extends Config((site, here, up) => {
     core = RocketCoreParams(mulDiv = Some(MulDivParams(
       mulUnroll = 8,
       mulEarlyOut = true,
-      divEarlyOut = true))),
+      divEarlyOut = true)),
+    fpu=None),
     dcache = Some(DCacheParams(
       rowBits = site(SystemBusKey).beatBits,
       nMSHRs = 0,
