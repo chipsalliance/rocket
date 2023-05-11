@@ -50,7 +50,7 @@ struct AquireRecord {
 
 class VBridgeImpl {
 public:
-    explicit VBridgeImpl();
+    explicit VBridgeImpl(std::string);
 
     void dpiDumpWave();
 

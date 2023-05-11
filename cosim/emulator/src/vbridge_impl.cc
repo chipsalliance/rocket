@@ -19,7 +19,7 @@ inline uint32_t decode_size(uint32_t encoded_size) {
   return 1 << encoded_size;
 }
 
-VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa("rv64gc", "msu"), _cycles(100), proc(
+VBridgeImpl::VBridgeImpl(std::string xlen) : sim(1 << 30), isa(xlen.c_str(), "msu"), _cycles(100), proc(
     /*isa*/ &isa,
     /*varch*/ fmt::format("").c_str(),
     /*sim*/ &sim,
@@ -460,7 +460,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
 }
 
 
-VBridgeImpl vbridge_impl_instance;
+VBridgeImpl vbridge_impl_instance(get_env_arg("xlen"));
 
 
 

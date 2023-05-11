@@ -574,9 +574,10 @@ object tests extends Module() {
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "20000",
+            "xlen" -> "rv32gc"
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
-          T.log.info(s"run test: ${c.path.last} ")
+          T.log.info(s"run test: ${c.path.last} with entrance = ${entrancePath} ")
           val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv, check = false)
 
           PathRef(if (p.exitCode != 0) {
