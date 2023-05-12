@@ -38,6 +38,9 @@ public:
         fs_init.read(&mem[cnt], 1024);
       }
 
+      size_t mem_start = 0x1018;
+      mem[mem_start+3] = 128;
+
       //print mem
 //    uint32_t addr = 0x80002000;
 //    for (int i = 0; i < 4; i++) {

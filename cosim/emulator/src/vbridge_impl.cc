@@ -19,7 +19,8 @@ inline uint32_t decode_size(uint32_t encoded_size) {
   return 1 << encoded_size;
 }
 
-VBridgeImpl::VBridgeImpl(std::string xlen) : sim(1 << 30), isa(xlen.c_str(), "msu"), _cycles(100), proc(
+//todo: use xlen to configure pro
+VBridgeImpl::VBridgeImpl(std::string xlen) : sim(1 << 30), isa("rv32gc", "msu"), _cycles(100), proc(
     /*isa*/ &isa,
     /*varch*/ fmt::format("").c_str(),
     /*sim*/ &sim,
