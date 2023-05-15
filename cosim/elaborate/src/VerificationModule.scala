@@ -9,6 +9,9 @@ import freechips.rocketchip.tile.NMI
 import org.chipsalliance.tilelink.bundle.{TLChannelA, TLChannelB, TLChannelC, TLChannelD, TLChannelE, TileLinkChannelAParameter, TileLinkChannelBParameter, TileLinkChannelCParameter, TileLinkChannelDParameter, TileLinkChannelEParameter}
 
 class VerificationModule(dut:DUT) extends TapModule {
+  //configure it
+  val xlen = 32
+
   val clockRate = 5
   val latPeekCommit = 2
   val latPokeTL = 1
@@ -20,13 +23,12 @@ class VerificationModule(dut:DUT) extends TapModule {
   val nmi = IO(Output(new NMI(32)))
   val intIn = IO(Output(Bool()))
 
-  val tlAParam = TileLinkChannelAParameter(32, 2, 64, 3)
-  val tlBParam = TileLinkChannelBParameter(32, 2, 64, 3)
-  val tlCParam = TileLinkChannelCParameter(32, 2, 64, 3)
-  val tlDParam = TileLinkChannelDParameter(32, 2, 64, 3)
+  //todo:config with xlen
+  val tlAParam = TileLinkChannelAParameter(32, 2, 32, 3)
+  val tlBParam = TileLinkChannelBParameter(32, 2, 32, 3)
+  val tlCParam = TileLinkChannelCParameter(32, 2, 32, 3)
+  val tlDParam = TileLinkChannelDParameter(32, 2, 32, 3)
   val tlEParam = TileLinkChannelEParameter(2)
-
-  val tlbundle_a = Flipped(Decoupled(new TLChannelA(tlAParam)))
 
   val tlportA = IO(Flipped(Decoupled(new TLChannelA(tlAParam))))
   val tlportB = IO(Decoupled(new TLChannelB(tlBParam)))
@@ -132,48 +134,82 @@ class VerificationModule(dut:DUT) extends TapModule {
     val clock       = IO(Input(Clock()))
     val rf_wen      = IO(Input(Bool()))
     val rf_waddr    = IO(Input(UInt(32.W)))
-    val rf_wdata    = IO(Input(UInt(64.W)))
+    val rf_wdata    = IO(Input(UInt(xlen.W)))
     val wb_reg_pc   = IO(Input(UInt(32.W)))
     val wb_reg_inst = IO(Input(UInt(32.W)))
     val wb_valid    = IO(Input(Bool()))
-    setInline(
-      s"$desiredName.sv",
-      s"""module $desiredName(
-         |  input clock,
-         |  input rf_wen,
-         |  input wb_valid,
-         |  input [31:0] rf_waddr,
-         |  input [63:0] rf_wdata,
-         |  input [31:0] wb_reg_pc,
-         |  input [31:0] wb_reg_inst
-         |);
-         |
-         |  bit[31:0] rf_wdata_high, rf_wdata_low;
-         |  assign rf_wdata_high = rf_wdata[63:32];
-         |  assign rf_wdata_low  = rf_wdata[31:0];
-         |
-         |  import "DPI-C" function void $desiredName(
-         |  input bit rf_wen,
-         |  input bit wb_valid,
-         |  input bit[31:0] rf_waddr,
-         |  input bit[31:0] rf_wdata_high,
-         |  input bit[31:0] rf_wdata_low,
-         |  input bit[31:0] wb_reg_pc,
-         |  input bit[31:0] wb_reg_inst
-         |  );
-         |  always @ (posedge clock) #($latPeekCommit) $desiredName(
-         |  rf_wen,
-         |  wb_valid,
-         |  rf_waddr,
-         |  rf_wdata_high,
-         |  rf_wdata_low,
-         |  wb_reg_pc,
-         |  wb_reg_inst
-         |  );
-         |
-         |endmodule
-         |""".stripMargin
-    )
+    if (xlen==64){
+      setInline(
+        s"$desiredName.sv",
+        s"""module $desiredName(
+           |  input clock,
+           |  input rf_wen,
+           |  input wb_valid,
+           |  input [31:0] rf_waddr,
+           |  input [63:0] rf_wdata,
+           |  input [31:0] wb_reg_pc,
+           |  input [31:0] wb_reg_inst
+           |);
+           |
+           |  bit[31:0] rf_wdata_high, rf_wdata_low;
+           |  assign rf_wdata_high = rf_wdata[63:32];
+           |  assign rf_wdata_low  = rf_wdata[31:0];
+           |
+           |  import "DPI-C" function void $desiredName(
+           |  input bit rf_wen,
+           |  input bit wb_valid,
+           |  input bit[31:0] rf_waddr,
+           |  input bit[31:0] rf_wdata_high,
+           |  input bit[31:0] rf_wdata_low,
+           |  input bit[31:0] wb_reg_pc,
+           |  input bit[31:0] wb_reg_inst
+           |  );
+           |  always @ (posedge clock) #($latPeekCommit) $desiredName(
+           |  rf_wen,
+           |  wb_valid,
+           |  rf_waddr,
+           |  rf_wdata_high,
+           |  rf_wdata_low,
+           |  wb_reg_pc,
+           |  wb_reg_inst
+           |  );
+           |
+           |endmodule
+           |""".stripMargin
+      )} else if(xlen ==32){
+      setInline(
+        s"$desiredName.sv",
+        s"""module $desiredName(
+           |  input clock,
+           |  input rf_wen,
+           |  input wb_valid,
+           |  input [31:0] rf_waddr,
+           |  input [31:0] rf_wdata,
+           |  input [31:0] wb_reg_pc,
+           |  input [31:0] wb_reg_inst
+           |);
+           |
+           |  import "DPI-C" function void $desiredName(
+           |  input bit rf_wen,
+           |  input bit wb_valid,
+           |  input bit[31:0] rf_waddr,
+           |  input bit[31:0] rf_wdata,
+           |  input bit[31:0] wb_reg_pc,
+           |  input bit[31:0] wb_reg_inst
+           |  );
+           |  always @ (posedge clock) #($latPeekCommit) $desiredName(
+           |  rf_wen,
+           |  wb_valid,
+           |  rf_waddr,
+           |  rf_wdata,
+           |  wb_reg_pc,
+           |  wb_reg_inst
+           |  );
+           |
+           |endmodule
+           |""".stripMargin
+      )
+    } else println("undifined xlen")
   })
   //todo:use rf_ext_w0_en
   dpiCommitPeek.rf_wen      := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_wen)
@@ -276,54 +312,101 @@ class VerificationModule(dut:DUT) extends TapModule {
     @public val dBits: TLChannelD = IO(Output(new TLChannelD(param_d)))
     @public val dValid = IO(Output(Bool()))
     @public val dReady = IO(Input(Bool()))
-    setInline(
-      s"$desiredName.sv",
-      s"""module $desiredName(
-         |  input clock,
-         |  output bit[${dBits.opcode.getWidth - 1}:0] dBits_opcode,
-         |  output bit[${dBits.param.getWidth - 1}:0] dBits_param,
-         |  output bit[${dBits.size.getWidth - 1}:0] dBits_size,
-         |  output bit[${dBits.source.getWidth - 1}:0] dBits_source,
-         |  output bit[${dBits.sink.getWidth - 1}:0] dBits_sink,
-         |  output bit[${dBits.denied.getWidth - 1}:0] dBits_denied,
-         |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
-         |  output bit dBits_corrupt,
-         |  output bit dValid,
-         |  input bit dReady
-         |);
-         |  bit[31:0] data_high,data_low;
-         |  assign dBits_data[63:32] = data_high;
-         |  assign dBits_data[31:0] = data_low;
-         |
-         |import "DPI-C" function void $desiredName(
-         |  output bit[31:0] data_high,
-         |  output bit[31:0] data_low,
-         |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
-         |  output bit[${dBits.param.getWidth - 1}:0] d_param,
-         |  output bit[${dBits.size.getWidth - 1}:0] d_size,
-         |  output bit[${dBits.source.getWidth - 1}:0] d_source,
-         |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
-         |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
-         |  output bit d_corrupt,
-         |  output bit d_valid,
-         |  input bit d_ready
-         |);
-         |always @ (posedge clock) #($latPokeTL) $desiredName(
-         |  data_high,
-         |  data_low,
-         |  dBits_opcode,
-         |  dBits_param,
-         |  dBits_size,
-         |  dBits_source,
-         |  dBits_sink,
-         |  dBits_denied,
-         |  dBits_corrupt,
-         |  dValid,
-         |  dReady
-         |);
-         |endmodule
-         |""".stripMargin
-    )
+    if(xlen==64){
+      setInline(
+        s"$desiredName.sv",
+        s"""module $desiredName(
+           |  input clock,
+           |  output bit[${dBits.opcode.getWidth - 1}:0] dBits_opcode,
+           |  output bit[${dBits.param.getWidth - 1}:0] dBits_param,
+           |  output bit[${dBits.size.getWidth - 1}:0] dBits_size,
+           |  output bit[${dBits.source.getWidth - 1}:0] dBits_source,
+           |  output bit[${dBits.sink.getWidth - 1}:0] dBits_sink,
+           |  output bit[${dBits.denied.getWidth - 1}:0] dBits_denied,
+           |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
+           |  output bit dBits_corrupt,
+           |  output bit dValid,
+           |  input bit dReady
+           |);
+           |  bit[31:0] data_high,data_low;
+           |  assign dBits_data[63:32] = data_high;
+           |  assign dBits_data[31:0] = data_low;
+           |
+           |import "DPI-C" function void $desiredName(
+           |  output bit[31:0] data_high,
+           |  output bit[31:0] data_low,
+           |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
+           |  output bit[${dBits.param.getWidth - 1}:0] d_param,
+           |  output bit[${dBits.size.getWidth - 1}:0] d_size,
+           |  output bit[${dBits.source.getWidth - 1}:0] d_source,
+           |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
+           |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
+           |  output bit d_corrupt,
+           |  output bit d_valid,
+           |  input bit d_ready
+           |);
+           |always @ (posedge clock) #($latPokeTL) $desiredName(
+           |  data_high,
+           |  data_low,
+           |  dBits_opcode,
+           |  dBits_param,
+           |  dBits_size,
+           |  dBits_source,
+           |  dBits_sink,
+           |  dBits_denied,
+           |  dBits_corrupt,
+           |  dValid,
+           |  dReady
+           |);
+           |endmodule
+           |""".stripMargin
+      )
+    } else if(xlen==32){
+      setInline(
+        s"$desiredName.sv",
+        s"""module $desiredName(
+           |  input clock,
+           |  output bit[${dBits.opcode.getWidth - 1}:0] dBits_opcode,
+           |  output bit[${dBits.param.getWidth - 1}:0] dBits_param,
+           |  output bit[${dBits.size.getWidth - 1}:0] dBits_size,
+           |  output bit[${dBits.source.getWidth - 1}:0] dBits_source,
+           |  output bit[${dBits.sink.getWidth - 1}:0] dBits_sink,
+           |  output bit[${dBits.denied.getWidth - 1}:0] dBits_denied,
+           |  output bit[${dBits.data.getWidth - 1}:0] dBits_data,
+           |  output bit dBits_corrupt,
+           |  output bit dValid,
+           |  input bit dReady
+           |);
+           |
+           |import "DPI-C" function void $desiredName(
+           |  output bit[31:0] dBits_data,
+           |  output bit[${dBits.opcode.getWidth - 1}:0] d_opcode,
+           |  output bit[${dBits.param.getWidth - 1}:0] d_param,
+           |  output bit[${dBits.size.getWidth - 1}:0] d_size,
+           |  output bit[${dBits.source.getWidth - 1}:0] d_source,
+           |  output bit[${dBits.sink.getWidth - 1}:0] d_sink,
+           |  output bit[${dBits.denied.getWidth - 1}:0] d_denied,
+           |  output bit d_corrupt,
+           |  output bit d_valid,
+           |  input bit d_ready
+           |);
+           |always @ (posedge clock) #($latPokeTL) $desiredName(
+           |  dBits_data,
+           |  dBits_opcode,
+           |  dBits_param,
+           |  dBits_size,
+           |  dBits_source,
+           |  dBits_sink,
+           |  dBits_denied,
+           |  dBits_corrupt,
+           |  dValid,
+           |  dReady
+           |);
+           |endmodule
+           |""".stripMargin
+      )
+    } else println("undefined xlen")
+
   }
 
   val dpiPeekTL = Module(new PeekTL(tlAParam,tlCParam))

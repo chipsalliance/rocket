@@ -17,11 +17,11 @@ void SpikeEvent::pre_log_arch_changes() {
     uint64_t address = target_mem;
     uint64_t addr_align = address & 0xFFFFFFC0;
     // record mem block for cache
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < config::beats; i++) {
       uint64_t data = 0;
       //scan 8 bytes to data
-      for (int j = 0; j < 8; ++j) {
-        data += (uint64_t) impl->load(addr_align + j + i * 8) << (j * 8);
+      for (int j = 0; j < config::xlenBytes; ++j) {
+        data += (uint64_t) impl->load(addr_align + j + i * config::xlenBytes) << (j * 8);
       }
       block.blocks[i] = data;
       block.addr = addr_align;
@@ -87,11 +87,11 @@ void SpikeEvent::log_arch_changes() {
   // record root page table
   if (satp_mode == 0x8 && block.addr == -1) {
     uint64_t root_addr = satp_ppn << 12;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < config::beats; i++) {
       uint64_t data = 0;
       //scan 8 bytes to data
-      for (int j = 0; j < 8; ++j) {
-        data += (uint64_t) impl->load(root_addr + j + i * 8) << (j * 8);
+      for (int j = 0; j < config::xlenBytes; ++j) {
+        data += (uint64_t) impl->load(root_addr + j + i * config::xlenBytes) << (j * 8);
       }
       block.blocks[i] = data;
       block.addr = root_addr;
@@ -106,7 +106,8 @@ void SpikeEvent::log_arch_changes() {
 
 SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl) : proc(proc), impl(impl) {
   auto &xr = proc.get_state()->XPR;
-  pc = proc.get_state()->pc;
+// todo: mask
+  pc = proc.get_state()->pc & (uint64_t) 0xffffffff;
   inst_bits = fetch.insn.bits();
   target_mem = -1;
   is_committed = false;// j insn should be committed immediately cause it doesn't have wb stage.

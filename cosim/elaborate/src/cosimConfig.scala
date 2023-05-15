@@ -19,7 +19,7 @@ case class cosimConfig(xLength: Int) extends Config((site, here, up) => {
       mulUnroll = 8,
       mulEarlyOut = true,
       divEarlyOut = true)),
-    fpu=None),
+      fpu = Some(FPUParams(fLen = xLength))),
     dcache = Some(DCacheParams(
       rowBits = site(SystemBusKey).beatBits,
       nMSHRs = 0,

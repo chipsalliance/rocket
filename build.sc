@@ -528,7 +528,7 @@ object cases extends Module {
 
       object `rv32` extends Suite {
         override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p => p.last.endsWith("rv32mi-p-scall")).map(PathRef(_))
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv32mi-p-csr")).filterNot(p => p.last.endsWith("rv32mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv32uf-v")).filterNot(p => p.last.startsWith("rv32uzfh-v")).filterNot(p => p.last.startsWith("rv32uc-v")).filterNot(p => p.last.startsWith("rv32ua-v")).filterNot(p => p.last.startsWith("rv32um-v")).filterNot(p => p.last.startsWith("rv32ui-v")).filterNot(p => p.last.startsWith("rv32um")).map(PathRef(_))
         }
       }
     }

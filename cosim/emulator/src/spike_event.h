@@ -10,12 +10,14 @@
 
 #include "simple_sim.h"
 #include "vbridge_impl.h"
+#include "encoding.h"
 
 class VBridgeImpl;
 
+//todo: config 16
 struct Cacheblock {
     uint64_t addr;
-    uint64_t blocks[8];
+    uint64_t blocks[16];
     bool remaining;
 };
 

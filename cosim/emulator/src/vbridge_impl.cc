@@ -113,9 +113,9 @@ std::optional<SpikeEvent> VBridgeImpl::spike_step() {
 uint64_t VBridgeImpl::get_t() {
   return getCycle();
 }
-
+//todo: mask
 uint8_t VBridgeImpl::load(uint64_t address) {
-  return *sim.addr_to_mem(address);
+  return *sim.addr_to_mem(address&(uint64_t) 0xffffffff);
 }
 
 int VBridgeImpl::timeoutCheck() {
@@ -162,14 +162,9 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
         aquire_banks[0].is_releaseData = true;
         return;
       }
-
       default:
         LOG(FATAL) << fmt::format("unknown tl_c opcode {}", tl_c.c_bits_opcode);
-
-
     }
-
-
   }
   // store A channel req
   uint8_t opcode = tl_peek.a_bits_opcode;
@@ -182,10 +177,11 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
     switch (opcode) {
       case TlOpcode::Get: {
-        for (int i = 0; i < 8; i++) {
+        LOG(INFO) << fmt::format("fetch start at = {:08X}", addr);
+        for (int i = 0; i < config::beats; i++) {
           uint64_t insn = 0;
-          for (int j = 0; j < 8; ++j) {
-            insn += (uint64_t) load(addr + j + i * 8) << (j * 8);
+          for (int j = 0; j < config::xlenBytes; ++j) {
+            insn += (uint64_t) load(addr + j + i * config::xlenBytes) << (j * 8);
           }
           fetch_banks[i].data = insn;
           fetch_banks[i].source = src;
@@ -203,7 +199,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (addr == se_iter->block.addr) {
       se = &(*se_iter);
-      LOG(INFO) << fmt::format("find TileLink acquire from Spike pc = {:08X}", se_iter->pc);
+      LOG(INFO) << fmt::format("Spike pc = {:08X} emit AquireBlock", se_iter->pc);
       break;
     }
   }
@@ -264,17 +260,19 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &t
 
     case TlOpcode::AcquireBlock: {
       beforeReturnAquire = 1;
-      LOG(INFO) << fmt::format("Find A Acquire for mem = {:08X}", addr);
-      for (int i = 0; i < 8; i++) {
+      LOG(INFO) << fmt::format("Find AcquireBlock for mem = {:08X}", addr);
+      for (int i = 0; i < config::beats; i++) {
         uint64_t data = 0;
-        for (int j = 0; j < 8; ++j) {
-          data += (uint64_t) load(addr + j + i * 8) << (j * 8);
+        for (int j = 0; j < config::xlenBytes; ++j) {
+          data += (uint64_t) load(addr + j + i * config::xlenBytes) << (j * 8);
         }
 //        LOG(INFO) << fmt::format("record bank[{}] for data = {:08X}", i, se->block.blocks[i]);
         aquire_banks[i].data = se->block.blocks[i];
         aquire_banks[i].param = param;
         aquire_banks[i].source = src;
         aquire_banks[i].remaining = true;
+        aquire_banks[i].size = size;
+//        LOG(INFO) << fmt::format("aquire banck{} = {:08X}",i,data);
       }
       break;
     }
@@ -296,8 +294,8 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
     if (fetch_bank.remaining) {
       fetch_bank.remaining = false;
       *tl_poke.d_bits_opcode = TlOpcode::AccessAckData;
-      *tl_poke.d_bits_data_high = fetch_bank.data >> 32;
-      *tl_poke.d_bits_data_low = fetch_bank.data;
+      *tl_poke.d_bits_data = fetch_bank.data;
+//      LOG(INFO) << fmt::format("poke fetch bank = {:08X}",fetch_bank.data);
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
@@ -311,15 +309,13 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       break;
     }
     if (aquire_bank.remaining) {
-//      LOG(INFO) << fmt::format("poke, time ={} ", get_t());
       aquire_bank.remaining = false;
-      *tl_poke.d_bits_opcode = aquire_bank.is_releaseData ? 6 : 5;
-      *tl_poke.d_bits_data_low = aquire_bank.data;
-      *tl_poke.d_bits_data_high = aquire_bank.data >> 32;
+      *tl_poke.d_bits_opcode = aquire_bank.is_releaseData ? TlOpcode::ReleaseAck : TlOpcode::GrantData;
+      *tl_poke.d_bits_data = aquire_bank.data;
       *tl_poke.d_bits_param = 0;
       aquire_bank.is_releaseData = false;
       source = aquire_bank.source;
-      size = 6;
+      size = aquire_bank.size;
       aqu_valid = true;
       afterReturnAquire = 1;
       break;
@@ -399,10 +395,9 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // peek rtl rf access
   uint32_t waddr = cmInterface.rf_waddr;
-  uint64_t wdata_low = cmInterface.rf_wdata_low;
-  uint64_t wdata_high = cmInterface.rf_wdata_high;
-  uint64_t wdata = wdata_low + (wdata_high << 32);
-
+//  uint64_t wdata_low = cmInterface.rf_wdata_low;
+//  uint64_t wdata_high = cmInterface.rf_wdata_high;
+  uint64_t wdata = cmInterface.rf_wdata;
   uint64_t pc = cmInterface.wb_reg_pc;
   uint64_t insn = cmInterface.wb_reg_inst;
 
@@ -434,14 +429,15 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
                            se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
       }
 
-      LOG(FATAL)
+      LOG(FATAL_S)
           << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , waddr={:08X}, waddr=Reg({})", pc, waddr, waddr);
     }
     // start to check RTL rf_write with spike event
     // for non-store ins. check rf write
     // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
     if ((!se->is_store) && (!se->is_mutiCycle)) {
-      CHECK_EQ_S(wdata, se->rd_new_bits)
+//todo:mask
+      CHECK_EQ_S(wdata, se->rd_new_bits & (uint64_t) 0xffffffff )
         << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
     } else if (se->is_mutiCycle) {
       if (!mutiCycleInsnDone) {

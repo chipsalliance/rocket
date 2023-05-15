@@ -13,6 +13,7 @@ import org.chipsalliance.rockettile._
 
 
 class DUT(p: Parameters) extends Module {
+  val xlen = 32;
   implicit val implicitP = p
   val tileParams = p(RocketTileParamsKey)
   val ldut = LazyModule(new SimpleLazyModule with BindingScope {
@@ -31,8 +32,8 @@ class DUT(p: Parameters) extends Module {
         supportsLogical = TransferSizes(1, 64),
         supportsArithmetic = TransferSizes(1, 64),
         fifoId = Some(0))),
-      //todo: config with xlen
-      beatBytes = 4,
+      //todo: config beatBytes with xlen
+      beatBytes = xlen/8,
       endSinkId = 4,
       minLatency = 1
     )))
@@ -81,10 +82,10 @@ class DUT(p: Parameters) extends Module {
     }
   })
   //todo: config databits with xlen
-  val tlAParam = TileLinkChannelAParameter(32,2,32,3)
-  val tlBParam = TileLinkChannelBParameter(32,2,32,3)
-  val tlCParam = TileLinkChannelCParameter(32,2,32,3)
-  val tlDParam = TileLinkChannelDParameter(2,3,32,3)
+  val tlAParam = TileLinkChannelAParameter(32,2,xlen,3)
+  val tlBParam = TileLinkChannelBParameter(32,2,xlen,3)
+  val tlCParam = TileLinkChannelCParameter(32,2,xlen,3)
+  val tlDParam = TileLinkChannelDParameter(2,3,xlen,3)
   val tlEParam = TileLinkChannelEParameter(2)
 
   val memory_0_a = IO(Decoupled(new TLChannelA(tlAParam)))

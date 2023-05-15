@@ -11,7 +11,17 @@ namespace TlOpcode {
         Grant = 4,
         GrantData = 5,
         Release = 6 ,
-        ReleaseData = 7;
+        ReleaseData = 7,
+        ReleaseAck = 6;
+}
+
+namespace config{
+    constexpr int
+        xlen = 32,
+        xlenBytes = 4,
+        // d channel transfer beats
+        beats = 16,
+        tlsize = 6;
 }
 
 struct TlPeekInterface {
@@ -45,8 +55,7 @@ struct TlPeekStatusInterface {
 };
 
 struct TlPokeInterface {
-    svBitVecVal *d_bits_data_high;
-    svBitVecVal *d_bits_data_low;
+    svBitVecVal *d_bits_data;
     svBitVecVal *d_bits_opcode;
     svBitVecVal *d_bits_param;
     svBitVecVal *d_bits_size;
@@ -64,8 +73,7 @@ struct CommitPeekInterface {
     svBit rf_wen;
     svBit wb_valid;
     svBitVecVal rf_waddr;
-    svBitVecVal rf_wdata_high;
-    svBitVecVal rf_wdata_low;
+    svBitVecVal rf_wdata;
     svBitVecVal wb_reg_pc;
     svBitVecVal wb_reg_inst;
 };

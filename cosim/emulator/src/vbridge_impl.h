@@ -44,6 +44,7 @@ struct AquireRecord {
     uint64_t data;
     uint16_t param;
     uint16_t source;
+    uint16_t size;
     bool remaining;
     bool is_releaseData;
 };
@@ -106,8 +107,9 @@ private:
     std::list<SpikeEvent> to_rtl_queue;
 
     std::map<reg_t, TLReqRecord> tl_banks;
-    FetchRecord fetch_banks[8];
-    AquireRecord aquire_banks[8];
+    //todo: configure it
+    FetchRecord fetch_banks[16];
+    AquireRecord aquire_banks[16];
 
     void loop_until_se_queue_full();
 
