@@ -53,8 +53,9 @@ void VBridgeImpl::dpiDumpWave() {
 }
 
 [[maybe_unused]] void dpiTimeoutCheck() {
-  if (vbridge_impl_instance.timeoutCheck())
-    dpiFinish();
+  TRY({
+        vbridge_impl_instance.timeoutCheck();
+      })
 }
 
 [[maybe_unused]] void dpiBasePoke(svBitVecVal *resetVector) {

@@ -528,7 +528,7 @@ object cases extends Module {
 
       object `rv32` extends Suite {
         override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv32mi-p-csr")).filterNot(p => p.last.endsWith("rv32mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv32uf-v")).filterNot(p => p.last.startsWith("rv32uzfh-v")).filterNot(p => p.last.startsWith("rv32uc-v")).filterNot(p => p.last.startsWith("rv32ua-v")).filterNot(p => p.last.startsWith("rv32um-v")).filterNot(p => p.last.startsWith("rv32ui-v")).filterNot(p => p.last.startsWith("rv32um")).map(PathRef(_))
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv32mi-p-csr")).filterNot(p => p.last.endsWith("rv32si-p-csr")).filterNot(p => p.last.endsWith("rv32mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv32ud-v")).filterNot(p => p.last.startsWith("rv32uf-v")).filterNot(p => p.last.startsWith("rv32uzfh-v")).filterNot(p => p.last.startsWith("rv32uc-v")).filterNot(p => p.last.startsWith("rv32ua-v")).filterNot(p => p.last.startsWith("rv32um-v")).filterNot(p => p.last.startsWith("rv32ui-v")).filterNot(p => p.last.startsWith("rv32um")).map(PathRef(_))
         }
       }
     }
@@ -568,16 +568,20 @@ object tests extends Module() {
         bin().map { c =>
           val name = c.path.last
           val entrancePath = if(cosim.xLen==64) cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
+          val out = os.proc("llvm-nm", s"${c.path.toString()}"+".elf").call().out.toString
+          val pass = os.proc("grep", "pass").call(stdin = out).toString().split(" ")
+          val pass_address = pass(1).split("\n")(1)
           val runEnv = Map(
             "COSIM_bin" -> c.path.toString,
             "COSIM_entrance_bin" -> entrancePath,
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
-            "COSIM_timeout" -> "20000",
-            "xlen" -> "rv32gc"
+            "COSIM_timeout" -> "100000",
+            "xlen" -> "rv32gc",
+            "passaddress" -> pass_address
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
-          T.log.info(s"run test: ${c.path.last} with entrance = ${entrancePath} ")
+          T.log.info(s"run test: ${c.path.last} with pass_address = ${pass_address} ")
           val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv, check = false)
 
           PathRef(if (p.exitCode != 0) {

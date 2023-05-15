@@ -119,9 +119,8 @@ uint8_t VBridgeImpl::load(uint64_t address) {
 }
 
 int VBridgeImpl::timeoutCheck() {
-  if (get_t() > timeout) {
-    LOG(INFO) << fmt::format("Simulation timeout, time = {}", get_t());
-    return 1;
+  if (get_t() > timeout ) {
+    LOG(FATAL_S) << fmt::format("Simulation timeout, t={}", get_t());
   }
   return 0;
 }
@@ -340,6 +339,7 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
   bool haveCommittedSe = false;
   uint64_t pc = cmInterface.wb_reg_pc;
   LOG(INFO) << fmt::format("RTL write back insn {:08X} time:={}", pc, get_t());
+  if(cmInterface.wb_reg_pc == pass_address) {throw ReturnException();}
   // Check rf write info
   if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
