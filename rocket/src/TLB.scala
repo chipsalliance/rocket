@@ -307,7 +307,7 @@ class TLB(
   instruction: Boolean,
   lgMaxSize: Int,
   cfg: TLBConfig,
-  edge: TLEdgeOut, // TODO: Decoupled from Tilelink
+  memParameters: MemoryParameters,
   pmpGranularity: Int,
   pgLevels: Int,
   minPgLevels: Int,
@@ -322,6 +322,8 @@ class TLB(
   asIdBits: Int,
   xLen: Int,
   cacheBlockBytes: Int,
+  memoryCacheable: Boolean,
+  memoryHomogenous: Boolean,
   usingHypervisor: Boolean,
   usingVM: Boolean,
   usingAtomics: Boolean,
@@ -430,22 +432,16 @@ class TLB(
   pmp.io.prv := mpu_priv
   // PMA
   // check exist a slave can consume this address.
-  val legal_address = edge.manager.findSafe(mpu_physaddr).reduce(_||_)
-  // check utility to help check SoC property.
-  def fastCheck(member: TLManagerParameters => Boolean) = // TODO: Decoupled from Tilelink
+  val legal_address = Memory.findSafe(mpu_physaddr).reduce(_||_)
     legal_address && edge.manager.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B)
-  // todo: using DataScratchpad doesn't support cacheable.
-  val cacheable = fastCheck(_.supportsAcquireB) && (instruction || !usingDataScratchpad).B
-  val homogeneous = TLBPageLookup(edge.manager.managers, xLen, cacheBlockBytes, BigInt(1) << pgIdxBits)(mpu_physaddr).homogeneous
-  // In M mode, if access DM address(debug module program buffer)
-  val deny_access_to_debug = mpu_priv <= PRV.M.U && p(DebugModuleKey).map(dmp => dmp.address.contains(mpu_physaddr)).getOrElse(false.B)
-  val prot_r = fastCheck(_.supportsGet) && !deny_access_to_debug && pmp.io.r
-  val prot_w = fastCheck(_.supportsPutFull) && !deny_access_to_debug && pmp.io.w
-  val prot_pp = fastCheck(_.supportsPutPartial)
-  val prot_al = fastCheck(_.supportsLogical)
-  val prot_aa = fastCheck(_.supportsArithmetic)
-  val prot_x = fastCheck(_.executable) && !deny_access_to_debug && pmp.io.x
-  val prot_eff = fastCheck(Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains _.regionType)
+
+  val prot_r = memParameters.readable.B && pmp.io.r
+  val prot_w = memParameters.writeable.B && pmp.io.w
+  val prot_pp = !(memParameters.supportsPutPartial.none).B
+  val prot_al = !(memParameters.supportsLogical.none).B
+  val prot_aa = !(memParameters.supportsArithmetic.none).B
+  val prot_x = memParameters.executable.B && pmp.io.x
+  val prot_eff = (memParameters.hasPutEffects || memParameters.hasGetEffects).B
 
   // hit check
   val sector_hits = sectored_entries(memIdx).map(_.sectorHit(vpn, priv_v))
@@ -461,7 +457,7 @@ class TLB(
     val refill_v = r_vstage1_en || r_stage2_en
     val newEntry = Wire(new TLBEntryData(ppnBits))
     newEntry.ppn := pte.ppn
-    newEntry.c := cacheable
+    newEntry.c := memoryCacheable.B
     newEntry.u := pte.u
     newEntry.g := pte.g && pte.v
     newEntry.ae_ptw := io.ptw.resp.bits.ae_ptw
@@ -546,7 +542,7 @@ class TLB(
   // put effect
   val eff_array = Cat(Fill(nPhysicalEntries, prot_eff), normal_entries.map(_.eff).asUInt)
   // cacheable
-  val c_array = Cat(Fill(nPhysicalEntries, cacheable), normal_entries.map(_.c).asUInt)
+  val c_array = Cat(Fill(nPhysicalEntries, memoryCacheable.B), normal_entries.map(_.c).asUInt)
   // put partial
   val ppp_array = Cat(Fill(nPhysicalEntries, prot_pp), normal_entries.map(_.ppp).asUInt)
   // atomic arithmetic
@@ -556,7 +552,7 @@ class TLB(
   val ppp_array_if_cached = ppp_array | c_array
   val paa_array_if_cached = paa_array | (if(usingAtomicsInCache) c_array else 0.U)
   val pal_array_if_cached = pal_array | (if(usingAtomicsInCache) c_array else 0.U)
-  val prefetchable_array = Cat((cacheable && homogeneous) << (nPhysicalEntries-1), normal_entries.map(_.c).asUInt)
+  val prefetchable_array = Cat((memoryCacheable && memoryHomogenous).B << (nPhysicalEntries-1), normal_entries.map(_.c).asUInt)
 
   // vaddr misaligned: vaddr[1:0]=b00
   val misaligned = (io.req.bits.vaddr & (UIntToOH(io.req.bits.size) - 1.U)).orR

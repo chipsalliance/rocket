@@ -5,6 +5,7 @@ package org.chipsalliance.rocket.util
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.random._
 
 abstract class ReplacementPolicy {
   def nBits: Int
