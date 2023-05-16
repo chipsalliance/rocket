@@ -15,32 +15,6 @@ namespace TlOpcode {
         ReleaseAck = 6;
 }
 
-//namespace config{
-//    const std::string
-//        isa = "rv32gc";
-//    constexpr int
-//        xlen = 32,
-//        xlenBytes = 4,
-//        // d channel transfer beats
-//        beats = 16,
-//        tlsize = 6;
-//    constexpr uint64_t
-//        mask = 0xffffffff;
-//}
-
-namespace config{
-    const std::string
-        isa = "rv64gc";
-    constexpr int
-        xlen = 64,
-        xlenBytes = xlen/8,
-        // d channel transfer beats
-        beats = 8,
-        tlsize = 6;
-    constexpr uint64_t
-        mask = 0xffffffffffffffff;
-}
-
 struct TlAPeekInterface {
     svBitVecVal a_bits_opcode;
     svBitVecVal a_bits_param;

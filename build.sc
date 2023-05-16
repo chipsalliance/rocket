@@ -126,7 +126,7 @@ object diplomatic extends common.DiplomaticModule {
 
 object cosim extends Module {
   // all xlen from here
-  val xLen = 64
+  val xLen = 32
   object elaborate extends ScalaModule with ScalafmtModule {
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
@@ -585,7 +585,8 @@ object tests extends Module() {
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "100000",
-            "passaddress" -> pass_address
+            "passaddress" -> pass_address,
+            "xlen" -> s"${cosim.xLen}"
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
           T.log.info(s"run test: ${c.path.last} ")

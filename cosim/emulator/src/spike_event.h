@@ -11,6 +11,7 @@
 #include "simple_sim.h"
 #include "vbridge_impl.h"
 #include "encoding.h"
+#include "emuconfig.h"
 
 class VBridgeImpl;
 
@@ -79,6 +80,7 @@ struct SpikeEvent {
 
     uint64_t target_mem;
     std::list<Cacheblock> cache_queue;
+    int xlen;
 
     struct {
         struct single_mem_write {

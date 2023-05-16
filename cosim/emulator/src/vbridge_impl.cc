@@ -20,7 +20,7 @@ inline uint32_t decode_size(uint32_t encoded_size) {
 }
 
 //todo: use xlen to configure pro
-VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa(config::isa.c_str(), "msu"), _cycles(100), proc(
+VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa(emuConfig.get_isa(xlen).c_str(), "msu"), _cycles(100), proc(
     /*isa*/ &isa,
     /*varch*/ fmt::format("").c_str(),
     /*sim*/ &sim,
@@ -115,7 +115,7 @@ uint64_t VBridgeImpl::get_t() {
 }
 //todo: mask
 uint8_t VBridgeImpl::load(uint64_t address) {
-  return *sim.addr_to_mem(address & config::mask);
+  return *sim.addr_to_mem(address & emuConfig.get_mask(xlen));
 }
 
 int VBridgeImpl::timeoutCheck() {
@@ -177,10 +177,10 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &
     switch (opcode) {
       case TlOpcode::Get: {
         LOG(INFO) << fmt::format("fetch start at = {:08X}", addr);
-        for (int i = 0; i < config::beats; i++) {
+        for (int i = 0; i < emuConfig.get_beats(xlen); i++) {
           uint64_t insn = 0;
-          for (int j = 0; j < config::xlenBytes; ++j) {
-            insn += (uint64_t) load(addr + j + i * config::xlenBytes) << (j * 8);
+          for (int j = 0; j < emuConfig.get_xlenBytes(xlen); ++j) {
+            insn += (uint64_t) load(addr + j + i * emuConfig.get_xlenBytes(xlen)) << (j * 8);
           }
           fetch_banks[i].data = insn;
           fetch_banks[i].source = src;
@@ -260,10 +260,10 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &
     case TlOpcode::AcquireBlock: {
       beforeReturnAquire = 1;
       LOG(INFO) << fmt::format("Find AcquireBlock for mem = {:08X}", addr);
-      for (int i = 0; i < config::beats; i++) {
+      for (int i = 0; i < emuConfig.get_beats(xlen); i++) {
         uint64_t data = 0;
-        for (int j = 0; j < config::xlenBytes; ++j) {
-          data += (uint64_t) load(addr + j + i * config::xlenBytes) << (j * 8);
+        for (int j = 0; j < emuConfig.get_xlenBytes(xlen); ++j) {
+          data += (uint64_t) load(addr + j + i * emuConfig.get_xlenBytes(xlen)) << (j * 8);
         }
 //        LOG(INFO) << fmt::format("record bank[{}] for data = {:08X}", i, se->block.blocks[i]);
         aquire_banks[i].data = se->block.blocks[i];
@@ -438,7 +438,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
     if ((!se->is_store) && (!se->is_mutiCycle)) {
 //todo:mask
-      CHECK_EQ_S(wdata, se->rd_new_bits & config::mask )
+      CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen) )
         << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
     } else if (se->is_mutiCycle) {
       if (!mutiCycleInsnDone) {

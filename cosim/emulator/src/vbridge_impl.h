@@ -11,6 +11,7 @@
 #include "util.h"
 #include "encoding.h"
 #include "spike_event.h"
+#include "emuconfig.h"
 
 #include <svdpi.h>
 
@@ -75,6 +76,8 @@ public:
 
     uint64_t getCycle() { return ctx->time(); }
 
+    const int xlen = std::stoul(get_env_arg("xlen"), nullptr, 10);
+
 
 private:
 
@@ -102,6 +105,8 @@ private:
     const uint64_t timeout = std::stoul(get_env_arg("COSIM_timeout"), nullptr, 10);
 
     const uint64_t pass_address = std::stoul(get_env_arg("passaddress"), nullptr, 16);
+
+
 
     //Spike
     const size_t to_rtl_queue_size = 10;
