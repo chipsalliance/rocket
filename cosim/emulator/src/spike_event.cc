@@ -107,7 +107,7 @@ void SpikeEvent::log_arch_changes() {
 SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl) : proc(proc), impl(impl) {
   auto &xr = proc.get_state()->XPR;
 // todo: mask
-  pc = proc.get_state()->pc & (uint64_t) 0xffffffff;
+  pc = proc.get_state()->pc & config::mask;
   inst_bits = fetch.insn.bits();
   target_mem = -1;
   is_committed = false;// j insn should be committed immediately cause it doesn't have wb stage.
@@ -241,6 +241,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
   is_trap = false;
 
   satp = proc.get_state()->satp->read();
+  //todo:configre it
   satp_ppn = satp & 0xFFFFFFFFFFF;
   satp_mode = clip(satp, 60, 63);
 

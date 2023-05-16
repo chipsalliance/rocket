@@ -51,7 +51,7 @@ struct AquireRecord {
 
 class VBridgeImpl {
 public:
-    explicit VBridgeImpl(std::string);
+    explicit VBridgeImpl();
 
     void dpiDumpWave();
 
@@ -59,7 +59,7 @@ public:
 
     void dpiPokeTL(const TlPokeInterface &tl_poke);
 
-    void dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek, const TlCInterface &tl_c);
+    void dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &tl_peek, const TlCPeekInterface &tl_c);
 
     void dpiRefillQueue();
 

@@ -55,7 +55,7 @@ struct SpikeEvent {
     std::string disasm;
 
 
-    uint64_t pc;
+    uint32_t pc;
     uint32_t inst_bits;
     bool is_compress;
 

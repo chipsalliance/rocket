@@ -20,7 +20,7 @@ inline uint32_t decode_size(uint32_t encoded_size) {
 }
 
 //todo: use xlen to configure pro
-VBridgeImpl::VBridgeImpl(std::string xlen) : sim(1 << 30), isa("rv32gc", "msu"), _cycles(100), proc(
+VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa(config::isa.c_str(), "msu"), _cycles(100), proc(
     /*isa*/ &isa,
     /*varch*/ fmt::format("").c_str(),
     /*sim*/ &sim,
@@ -38,8 +38,8 @@ void VBridgeImpl::init_spike() {
   LOG(INFO) << fmt::format("Spike reset mstatus={:08X}", state->mstatus->read());
   // load binary to reset_vector
   sim.load(bin, ebin, reset_vector);
-  LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, wave={}, reset_vector={:#x}", bin, wave,
-                           reset_vector);
+  LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, entrance = {}, wave={}, reset_vector={:#x}, passaddress = {:#x}", bin, ebin, wave,
+                           reset_vector, pass_address);
 }
 
 void VBridgeImpl::loop_until_se_queue_full() {
@@ -115,7 +115,7 @@ uint64_t VBridgeImpl::get_t() {
 }
 //todo: mask
 uint8_t VBridgeImpl::load(uint64_t address) {
-  return *sim.addr_to_mem(address&(uint64_t) 0xffffffff);
+  return *sim.addr_to_mem(address & config::mask);
 }
 
 int VBridgeImpl::timeoutCheck() {
@@ -138,7 +138,7 @@ void VBridgeImpl::dpiInitCosim() {
   dpiDumpWave();
 }
 
-void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlPeekInterface &tl_peek, const TlCInterface &tl_c) {
+void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &tl_peek, const TlCPeekInterface &tl_c) {
   VLOG(3) << fmt::format("[{}] dpiPeekTL", get_t());
 
   if (!tl_peek.a_valid && !tl_c.c_valid) return;
@@ -293,8 +293,8 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
     if (fetch_bank.remaining) {
       fetch_bank.remaining = false;
       *tl_poke.d_bits_opcode = TlOpcode::AccessAckData;
-      *tl_poke.d_bits_data = fetch_bank.data;
-//      LOG(INFO) << fmt::format("poke fetch bank = {:08X}",fetch_bank.data);
+      *tl_poke.d_bits_data_high = fetch_bank.data >> 32;
+      *tl_poke.d_bits_data_low = fetch_bank.data;
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
@@ -310,7 +310,8 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
     if (aquire_bank.remaining) {
       aquire_bank.remaining = false;
       *tl_poke.d_bits_opcode = aquire_bank.is_releaseData ? TlOpcode::ReleaseAck : TlOpcode::GrantData;
-      *tl_poke.d_bits_data = aquire_bank.data;
+      *tl_poke.d_bits_data_low = aquire_bank.data;
+      *tl_poke.d_bits_data_high = aquire_bank.data >> 32;
       *tl_poke.d_bits_param = 0;
       aquire_bank.is_releaseData = false;
       source = aquire_bank.source;
@@ -395,9 +396,9 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // peek rtl rf access
   uint32_t waddr = cmInterface.rf_waddr;
-//  uint64_t wdata_low = cmInterface.rf_wdata_low;
-//  uint64_t wdata_high = cmInterface.rf_wdata_high;
-  uint64_t wdata = cmInterface.rf_wdata;
+  uint64_t wdata_low = cmInterface.rf_wdata_low;
+  uint64_t wdata_high = cmInterface.rf_wdata_high;
+  uint64_t wdata = wdata_low + (wdata_high << 32);
   uint64_t pc = cmInterface.wb_reg_pc;
   uint64_t insn = cmInterface.wb_reg_inst;
 
@@ -437,7 +438,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
     if ((!se->is_store) && (!se->is_mutiCycle)) {
 //todo:mask
-      CHECK_EQ_S(wdata, se->rd_new_bits & (uint64_t) 0xffffffff )
+      CHECK_EQ_S(wdata, se->rd_new_bits & config::mask )
         << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
     } else if (se->is_mutiCycle) {
       if (!mutiCycleInsnDone) {
@@ -456,8 +457,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
 
 }
 
-
-VBridgeImpl vbridge_impl_instance(get_env_arg("xlen"));
+VBridgeImpl vbridge_impl_instance;
 
 
 

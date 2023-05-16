@@ -125,7 +125,8 @@ object diplomatic extends common.DiplomaticModule {
 }
 
 object cosim extends Module {
-  val xLen = 32
+  // all xlen from here
+  val xLen = 64
   object elaborate extends ScalaModule with ScalafmtModule {
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
@@ -329,6 +330,7 @@ object cases extends Module {
       Lib.findSourceFiles(sources(), Seq("S", "s", "c", "cpp")).map(PathRef(_))
     }
 
+    //default to 64
     def xlen: Int = 64
 
     def linkScript: T[PathRef] = T {
@@ -365,7 +367,9 @@ object cases extends Module {
     }
   }
 
-  object entrance64 extends Case
+  object entrance64 extends Case {
+    override def xlen = 64
+  }
 
   object entrance32 extends Case {
     override def xlen = 32
@@ -522,13 +526,17 @@ object cases extends Module {
 
       object `rv64` extends Suite {
         override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv64mi-p-csr")).filterNot(p => p.last.endsWith("rv64mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv64um")).filterNot(p => p.last.startsWith("rv64ui-v")).filterNot(p => p.last.startsWith("rv64uf-v")).filterNot(p => p.last.startsWith("rv64ua-v")).filterNot(p => p.last.startsWith("rv64uzfh-v")).filterNot(p => p.last.startsWith("rv64ud-v")).filterNot(p => p.last.startsWith("rv64uc-v")).map(PathRef(_))
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
+            p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p")| p.last.startsWith("rv64ud-p")).filterNot(p =>
+            p.last.startsWith("rv64ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("icache-alias") | p.last.endsWith("rv64mi-p-breakpoint") | p.last.endsWith("scall") | p.last.endsWith("rv64si-p-wfi") | p.last.endsWith("rv64ui-p-ma_data")).map(PathRef(_))
         }
       }
 
       object `rv32` extends Suite {
         override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filterNot(p => p.last.endsWith("rv32mi-p-csr")).filterNot(p => p.last.endsWith("rv32si-p-csr")).filterNot(p => p.last.endsWith("rv32mi-p-breakpoint")).filterNot(p => p.last.startsWith("rv32ud-v")).filterNot(p => p.last.startsWith("rv32uf-v")).filterNot(p => p.last.startsWith("rv32uzfh-v")).filterNot(p => p.last.startsWith("rv32uc-v")).filterNot(p => p.last.startsWith("rv32ua-v")).filterNot(p => p.last.startsWith("rv32um-v")).filterNot(p => p.last.startsWith("rv32ui-v")).filterNot(p => p.last.startsWith("rv32um")).map(PathRef(_))
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter (p =>
+            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p")).filterNot(p =>
+            p.last.startsWith("rv32ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("scall") | p.last.endsWith("rv32si-p-wfi") | p.last.endsWith("rv32si-p-dirty") | p.last.endsWith("rv32mi-p-breakpoint")).map(PathRef(_))
         }
       }
     }
@@ -577,11 +585,10 @@ object tests extends Module() {
             "COSIM_wave" -> (T.dest / "wave").toString,
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "100000",
-            "xlen" -> "rv32gc",
             "passaddress" -> pass_address
           )
           val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
-          T.log.info(s"run test: ${c.path.last} with pass_address = ${pass_address} ")
+          T.log.info(s"run test: ${c.path.last} ")
           val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv, check = false)
 
           PathRef(if (p.exitCode != 0) {

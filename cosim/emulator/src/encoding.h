@@ -15,16 +15,33 @@ namespace TlOpcode {
         ReleaseAck = 6;
 }
 
+//namespace config{
+//    const std::string
+//        isa = "rv32gc";
+//    constexpr int
+//        xlen = 32,
+//        xlenBytes = 4,
+//        // d channel transfer beats
+//        beats = 16,
+//        tlsize = 6;
+//    constexpr uint64_t
+//        mask = 0xffffffff;
+//}
+
 namespace config{
+    const std::string
+        isa = "rv64gc";
     constexpr int
-        xlen = 32,
-        xlenBytes = 4,
+        xlen = 64,
+        xlenBytes = xlen/8,
         // d channel transfer beats
-        beats = 16,
+        beats = 8,
         tlsize = 6;
+    constexpr uint64_t
+        mask = 0xffffffffffffffff;
 }
 
-struct TlPeekInterface {
+struct TlAPeekInterface {
     svBitVecVal a_bits_opcode;
     svBitVecVal a_bits_param;
     svBitVecVal a_bits_size;
@@ -37,7 +54,7 @@ struct TlPeekInterface {
     svBit d_ready;
 };
 
-struct TlCInterface {
+struct TlCPeekInterface {
     svBitVecVal c_bits_opcode;
     svBitVecVal c_bits_param;
     svBitVecVal c_bits_size;
@@ -55,7 +72,8 @@ struct TlPeekStatusInterface {
 };
 
 struct TlPokeInterface {
-    svBitVecVal *d_bits_data;
+    svBitVecVal *d_bits_data_high;
+    svBitVecVal *d_bits_data_low;
     svBitVecVal *d_bits_opcode;
     svBitVecVal *d_bits_param;
     svBitVecVal *d_bits_size;
@@ -73,7 +91,8 @@ struct CommitPeekInterface {
     svBit rf_wen;
     svBit wb_valid;
     svBitVecVal rf_waddr;
-    svBitVecVal rf_wdata;
+    svBitVecVal rf_wdata_high;
+    svBitVecVal rf_wdata_low;
     svBitVecVal wb_reg_pc;
     svBitVecVal wb_reg_inst;
 };

@@ -12,8 +12,8 @@ import freechips.rocketchip.diplomacy._
 import org.chipsalliance.rockettile._
 
 
-class DUT(p: Parameters) extends Module {
-  val xlen = 32;
+class DUT(xLen:Int)(p: Parameters) extends Module {
+  val xlen = xLen
   implicit val implicitP = p
   val tileParams = p(RocketTileParamsKey)
   val ldut = LazyModule(new SimpleLazyModule with BindingScope {
@@ -32,7 +32,6 @@ class DUT(p: Parameters) extends Module {
         supportsLogical = TransferSizes(1, 64),
         supportsArithmetic = TransferSizes(1, 64),
         fifoId = Some(0))),
-      //todo: config beatBytes with xlen
       beatBytes = xlen/8,
       endSinkId = 4,
       minLatency = 1
