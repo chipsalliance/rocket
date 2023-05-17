@@ -589,6 +589,7 @@ object tests extends Module() {
     trait Test extends TaskModule {
 
       def xlen = "64"
+
       override def defaultCommandName() = "run"
 
       def bin: T[Seq[PathRef]]
@@ -596,9 +597,8 @@ object tests extends Module() {
       def run(args: String*) = T.command {
         bin().map { c =>
           val name = c.path.last
-//          val xlen = if(name.contains("64")) "64" else "32"
-          val entrancePath = if(xlen == "64") cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
-          val out = os.proc("llvm-nm", s"${c.path.toString()}"+".elf").call().out.toString
+          val entrancePath = if (xlen == "64") cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
+          val out = os.proc("llvm-nm", s"${c.path.toString()}" + ".elf").call().out.toString
           val pass = os.proc("grep", "pass").call(stdin = out).toString().split(" ")
           val pass_address = pass(1).split("\n")(1)
           val runEnv = Map(
@@ -637,6 +637,7 @@ object tests extends Module() {
 
     object `rv32` extends Test {
       def bin = cases.riscvtests.test.`rv32`.binaries
+
       override def xlen = "32"
     }
 

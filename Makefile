@@ -29,7 +29,7 @@ elf:
 test:
 	mill -i -j 0 tests.run.rv64default.run
 
-riscvtests:
+riscv64tests:
 	mill -i -j 0 tests.riscvtests.rv64
 
 riscv32tests:
