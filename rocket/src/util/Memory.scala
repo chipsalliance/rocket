@@ -5,9 +5,40 @@ package org.chipsalliance.rocket.util
 import chisel3._
 import chisel3.util._
 
+import org.chipsalliance.rocket._
+
 object Memory {
   // The safe version will check the entire address
-  def findSafe(address: UInt, slaveAddressSets: Seq[AddressSet]) = VecInit(slaveAddressSets.map(_.contains(address))).asUInt.orR
+  def findSafe(address: UInt, slaves: Seq[MemSlaveParameters]) = VecInit(slaves.map(_.address.map(_.contains(address)).reduce(_ || _)))
+
+  // Compute the simplest AddressSets that decide a key
+  def fastPropertyGroup[K](p: MemSlaveParameters => K, slaves: Seq[MemSlaveParameters]): Seq[(K, Seq[AddressSet])] = {
+    val groups = groupByIntoSeq(slaves.map(m => (p(m), m.address)))( _._1).map { case (k, vs) =>
+      k -> vs.flatMap(_._2)
+    }
+    val reductionMask = AddressDecoder(groups.map(_._2))
+    groups.map { case (k, seq) => k -> AddressSet.unify(seq.map(_.widen(~reductionMask)).distinct) }
+  }
+  // Select a property
+  def fastProperty[K, D <: Data](address: UInt, p: MemSlaveParameters => K, d: K => D, slaves: Seq[MemSlaveParameters]): D =
+    Mux1H(fastPropertyGroup(p, slaves).map { case (v, a) => (a.map(_.contains(address)).reduce(_||_), d(v)) })
+}
+
+/** Options for describing the attributes of memory regions */
+object RegionType {
+  // Define the 'more relaxed than' ordering
+  val cases = Seq(CACHED, TRACKED, UNCACHED, IDEMPOTENT, VOLATILE, PUT_EFFECTS, GET_EFFECTS)
+  sealed trait T extends Ordered[T] {
+    def compare(that: T): Int = cases.indexOf(that) compare cases.indexOf(this)
+  }
+
+  case object CACHED      extends T // an intermediate agent may have cached a copy of the region for you
+  case object TRACKED     extends T // the region may have been cached by another master, but coherence is being provided
+  case object UNCACHED    extends T // the region has not been cached yet, but should be cached when possible
+  case object IDEMPOTENT  extends T // gets return most recently put content, but content should not be cached
+  case object VOLATILE    extends T // content may change without a put, but puts and gets have no side effects
+  case object PUT_EFFECTS extends T // puts produce side effects and so must not be combined/delayed
+  case object GET_EFFECTS extends T // gets produce side effects and so must not be issued speculatively
 }
 
 // An potentially empty inclusive range of 2-powers [min, max] (in bytes)
@@ -25,9 +56,9 @@ case class TransferSizes(min: Int, max: Int)
   def contains(x: Int) = isPow2(x) && min <= x && x <= max
   def containsLg(x: Int) = contains(1 << x)
   def containsLg(x: UInt) =
-    if (none) Bool(false)
-    else if (min == max) { UInt(log2Ceil(min)) === x }
-    else { UInt(log2Ceil(min)) <= x && x <= UInt(log2Ceil(max)) }
+    if (none) false.B
+    else if (min == max) { log2Ceil(min).U === x }
+    else { log2Ceil(min).U <= x && x <= log2Ceil(max).U }
 
   def contains(x: TransferSizes) = x.none || (min <= x.min && x.max <= max)
 
@@ -72,7 +103,7 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet]
   // We do allow negative mask (=> ignore all high bits)
 
   def contains(x: BigInt) = ((x ^ base) & ~mask) == 0
-  def contains(x: UInt) = ((x ^ UInt(base)).zext & SInt(~mask)) === SInt(0)
+  def contains(x: UInt) = ((x ^ base.U).zext & (~mask).S) === 0.S
 
   // turn x into an address contained in this set
   def legalize(x: UInt): UInt = base.U | (mask.U & x)
@@ -192,21 +223,20 @@ object AddressSet
   }
 }
 
-case class MemoryParameters(
-  val readable: Boolean,
-  val writeable: Boolean,
-  val executable: Boolean,
-  val supportsLogical: TransferSizes,
-  val supportsArithmetic: TransferSizes,
-  val supportsPutFull: TransferSizes,
-  val supportsPutPartial: TransferSizes,
-  val supportsGet: TransferSizes,
-  val supportsAcquireB: TransferSizes,
-  val supportsAcquireT: TransferSizes,
+case class MemSlaveParameters(
+  val address: Seq[AddressSet],
+  val regionType:         RegionType.T  = RegionType.GET_EFFECTS,
 
-  val hasPutEffects: Boolean,
-  val hasGetEffects: Boolean,
+  val executable:         Boolean       = false,
+
+  val supportsAcquireT:   TransferSizes = TransferSizes.none,
+  val supportsAcquireB:   TransferSizes = TransferSizes.none,
+  val supportsArithmetic: TransferSizes = TransferSizes.none,
+  val supportsLogical:    TransferSizes = TransferSizes.none,
+  val supportsGet:        TransferSizes = TransferSizes.none,
+  val supportsPutFull:    TransferSizes = TransferSizes.none,
+  val supportsPutPartial: TransferSizes = TransferSizes.none,
+  val supportsHint:       TransferSizes = TransferSizes.none,
 
   val name: String,
-  val address: Seq[AddressSet]
 )

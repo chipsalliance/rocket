@@ -307,13 +307,12 @@ case class TLBConfig(
   * @param instruction true for ITLB, false for DTLB
   * @param lgMaxSize @todo seems granularity
   * @param cfg [[TLBConfig]]
-  * @param edge collect SoC metadata.
   */
 class TLB(
   instruction: Boolean,
   lgMaxSize: Int,
   cfg: TLBConfig,
-  memParameters: MemoryParameters,
+  memSlaves: Seq[MemSlaveParameters],
   pmpGranularity: Int,
   pgLevels: Int,
   minPgLevels: Int,
@@ -438,16 +437,19 @@ class TLB(
   pmp.io.prv := mpu_priv
   // PMA
   // check exist a slave can consume this address.
-  val legal_address = Memory.findSafe(mpu_physaddr).reduce(_||_)
-    legal_address && edge.manager.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B)
-
-  val prot_r = memParameters.readable.B && pmp.io.r
-  val prot_w = memParameters.writeable.B && pmp.io.w
-  val prot_pp = !(memParameters.supportsPutPartial.none).B
-  val prot_al = !(memParameters.supportsLogical.none).B
-  val prot_aa = !(memParameters.supportsArithmetic.none).B
-  val prot_x = memParameters.executable.B && pmp.io.x
-  val prot_eff = (memParameters.hasPutEffects || memParameters.hasGetEffects).B
+  val legal_address = Memory.findSafe(mpu_physaddr, memSlaves).reduce(_ || _)
+  // check utility to help check SoC property
+  def fastCheck(member: MemSlaveParameters => Boolean) = 
+    legal_address && Memory.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B, memSlaves)
+  // In M mode, if access DM address(debug module program buffer)
+  val deny_access_to_debug = mpu_priv <= PRV.M.U && p(DebugModuleKey).map(dmp => dmp.address.contains(mpu_physaddr)).getOrElse(false.B) // TODO: Refactor `p`
+  val prot_r = fastCheck(_.supportsGet) && !deny_access_to_debug && pmp.io.r
+  val prot_w = fastCheck(_.supportsPutFull) && !deny_access_to_debug && pmp.io.w
+  val prot_pp = fastCheck(_.supportsPutPartial)
+  val prot_al = fastCheck(_.supportsLogical)
+  val prot_aa = fastCheck(_.supportsArithmetic)
+  val prot_x = fastCheck(_.executable) && !deny_access_to_debug && pmp.io.x
+  val prot_eff = fastCheck(Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains _.regionType)
 
   // hit check
   val sector_hits = sectored_entries(memIdx).map(_.sectorHit(vpn, priv_v))
