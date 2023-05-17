@@ -126,8 +126,12 @@ object diplomatic extends common.DiplomaticModule {
 
 object cosim extends Module {
   // all xlen from here
-  val xLen = 32
-  object elaborate extends ScalaModule with ScalafmtModule {
+  object elaborate extends Cross[elaborate]("32","64")
+  class elaborate(xLen: String) extends ScalaModule with ScalafmtModule {
+
+    def millSourcePath = super.millSourcePath / os.up
+
+    def sources = T.sources(millSourcePath)
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
     }
@@ -157,10 +161,14 @@ object cosim extends Module {
         runClasspath().map(_.path),
         Seq(
           "--dir", T.dest.toString,
-          "--xlen",s"$xLen"
+          "--xlen",xLen
         ),
       )
       PathRef(T.dest)
+    }
+
+    def crossprint = T{
+      println("xlen"+xLen)
     }
 
     def chiselAnno = T {
@@ -177,12 +185,18 @@ object cosim extends Module {
 
   }
 
-  object mfccompile extends Module {
+  object mfccompile extends Cross[mfccompile]("32","64")
+
+  class mfccompile(xLen: String) extends Module {
+
+    def millSourcePath = super.millSourcePath / os.up
+
+    def sources = T.sources(millSourcePath)
 
     def compile = T {
       os.proc("firtool",
-        elaborate.chirrtl().path,
-        s"--annotation-file=${elaborate.chiselAnno().path}",
+        elaborate(xLen).chirrtl().path,
+        s"--annotation-file=${elaborate(xLen).chiselAnno().path}",
         "--disable-annotation-unknown",
         "-disable-infer-rw",
         "-dedup",
@@ -216,7 +230,12 @@ object cosim extends Module {
     }
   }
 
-  object emulator extends Module {
+  object emulator extends Cross[emulator]("32","64")
+  class emulator(xLen: String) extends Module {
+
+    def millSourcePath = super.millSourcePath / os.up
+
+    def sources = T.sources(millSourcePath)
 
     def csources = T.source {
       millSourcePath / "src"
@@ -227,7 +246,7 @@ object cosim extends Module {
     }
 
     def vsrcs = T.persistent {
-      mfccompile.rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
+      mfccompile(xLen).rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
     }
 
     def allCSourceFiles = T {
@@ -528,7 +547,7 @@ object cases extends Module {
         override def binaries = T {
           os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
             p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p")| p.last.startsWith("rv64ud-p")).filterNot(p =>
-            p.last.startsWith("rv64ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("icache-alias") | p.last.endsWith("rv64mi-p-breakpoint") | p.last.endsWith("scall") | p.last.endsWith("rv64si-p-wfi") | p.last.endsWith("rv64ui-p-ma_data")).map(PathRef(_))
+            p.last.startsWith("rv64ui-p-simple") |  p.last.endsWith("csr") | p.last.endsWith("rv64mi-p-breakpoint")).map(PathRef(_))
         }
       }
 
@@ -557,8 +576,8 @@ object tests extends Module() {
           "COSIM_wave" -> (T.dest / "wave").toString,
           "COSIM_reset_vector" -> "80000000",
         )
-        T.log.info(s"run smoketest with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulator.elf().path.toString()}")
-        os.proc(Seq(cosim.emulator.elf().path.toString())).call(env = runEnv)
+        T.log.info(s"run smoketest with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulator("64").elf().path.toString()}")
+        os.proc(Seq(cosim.emulator("64").elf().path.toString())).call(env = runEnv)
         PathRef(T.dest)
       }
     }
@@ -568,6 +587,8 @@ object tests extends Module() {
   object riscvtests extends Module {
 
     trait Test extends TaskModule {
+
+      def xlen = "64"
       override def defaultCommandName() = "run"
 
       def bin: T[Seq[PathRef]]
@@ -575,7 +596,8 @@ object tests extends Module() {
       def run(args: String*) = T.command {
         bin().map { c =>
           val name = c.path.last
-          val entrancePath = if(cosim.xLen==64) cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
+//          val xlen = if(name.contains("64")) "64" else "32"
+          val entrancePath = if(xlen == "64") cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
           val out = os.proc("llvm-nm", s"${c.path.toString()}"+".elf").call().out.toString
           val pass = os.proc("grep", "pass").call(stdin = out).toString().split(" ")
           val pass_address = pass(1).split("\n")(1)
@@ -586,9 +608,9 @@ object tests extends Module() {
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "100000",
             "passaddress" -> pass_address,
-            "xlen" -> s"${cosim.xLen}"
+            "xlen" -> xlen
           )
-          val proc = os.proc(Seq(cosim.emulator.elf().path.toString()))
+          val proc = os.proc(Seq(cosim.emulator(xlen).elf().path.toString()))
           T.log.info(s"run test: ${c.path.last} ")
           val p = proc.call(stdout = T.dest / s"$name.running.log", mergeErrIntoOut = true, env = runEnv, check = false)
 
@@ -615,6 +637,7 @@ object tests extends Module() {
 
     object `rv32` extends Test {
       def bin = cases.riscvtests.test.`rv32`.binaries
+      override def xlen = "32"
     }
 
     object `rv64si-p` extends Test {
