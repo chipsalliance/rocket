@@ -130,7 +130,8 @@ private:
 
     int beforeReturnAquire;
 
-    int afterReturnAquire;
+    bool isPokingAcquie;
+    bool isPokingFetch;
 
     bool waitforMutiCycleInsn;
     bool mutiCycleInsnDone;

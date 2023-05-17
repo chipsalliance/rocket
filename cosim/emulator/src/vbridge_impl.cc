@@ -38,8 +38,8 @@ void VBridgeImpl::init_spike() {
   LOG(INFO) << fmt::format("Spike reset mstatus={:08X}", state->mstatus->read());
   // load binary to reset_vector
   sim.load(bin, ebin, reset_vector);
-  LOG(INFO) << fmt::format("Simulation Environment Initialized: bin={}, entrance = {}, wave={}, reset_vector={:#x}, passaddress = {:#x}", bin, ebin, wave,
-                           reset_vector, pass_address);
+  LOG(INFO) << fmt::format("Simulation Environment Initialized: COSIM_bin={};COSIM_entrance_bin= {};COSIM_wave={};COSIM_timeout={};COSIM_reset_vector={:#x};passaddress={:#x};xlen={}", bin, ebin, wave,timeout,
+                           reset_vector, pass_address,xlen);
 }
 
 void VBridgeImpl::loop_until_se_queue_full() {
@@ -198,7 +198,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
     if (addr == se_iter->block.addr) {
       se = &(*se_iter);
-      LOG(INFO) << fmt::format("Spike pc = {:08X} emit AquireBlock", se_iter->pc);
+      LOG(INFO) << fmt::format("Find AcquireBlock from spikeEvent pc = {:08X}", se_iter->pc);
       break;
     }
   }
@@ -286,8 +286,8 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   uint16_t source = 0;
   uint16_t param = 0;
   for (auto &fetch_bank: fetch_banks) {
-    if (afterReturnAquire) {
-      afterReturnAquire = 0;
+    if (isPokingAcquie) {
+      isPokingAcquie = false;
       break;
     }
     if (fetch_bank.remaining) {
@@ -298,6 +298,7 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       source = fetch_bank.source;
       size = 6;
       fetch_valid = true;
+      isPokingFetch = true;
       break;
     }
   }
@@ -305,6 +306,10 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
   for (auto &aquire_bank: aquire_banks) {
     if (beforeReturnAquire) {
       beforeReturnAquire = 0;
+      break;
+    }
+    if (isPokingFetch) {
+      isPokingFetch = false;
       break;
     }
     if (aquire_bank.remaining) {
@@ -317,7 +322,7 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       source = aquire_bank.source;
       size = aquire_bank.size;
       aqu_valid = true;
-      afterReturnAquire = 1;
+      isPokingAcquie = true;
       break;
     }
   }
