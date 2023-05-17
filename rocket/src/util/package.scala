@@ -31,4 +31,17 @@ package object util {
       bitIndexes(x.clearBit(lowest), lowest +: tail)
     }
   }
+
+  /** Similar to Seq.groupBy except this returns a Seq instead of a Map
+    * Useful for deterministic code generation
+    */
+  def groupByIntoSeq[A, K](xs: Seq[A])(f: A => K): immutable.Seq[(K, immutable.Seq[A])] = {
+    val map = mutable.LinkedHashMap.empty[K, mutable.ListBuffer[A]]
+    for (x <- xs) {
+      val key = f(x)
+      val l = map.getOrElseUpdate(key, mutable.ListBuffer.empty[A])
+      l += x
+    }
+    map.view.map({ case (k, vs) => k -> vs.toList }).toList
+  }
 }

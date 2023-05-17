@@ -29,10 +29,10 @@ object TLBPageLookup
     val useful = r || w || x || c || a || l
   }
 
-  private def groupRegions(memParameters: Seq[MemoryParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = { // TODO: Decoupled from Tilelink
-    val permissions = memParameters.map { p =>
+  private def groupRegions(memSlaves: Seq[MemSlaveParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = { // TODO: Decoupled from Tilelink
+    val permissions = memSlaves.map { p =>
       (p.address, TLBFixedPermissions(
-        e = p.hasPutEffects   || p.hasGetEffects,
+        e = Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains p.regionType,
         r = p.supportsGet     || p.supportsAcquireB, // if cached, never uses Get
         w = p.supportsPutFull || p.supportsAcquireT, // if cached, never uses Put
         x = p.executable,
@@ -51,7 +51,7 @@ object TLBPageLookup
 
   // TODO
   // Unmapped memory is considered to be inhomogeneous
-  def apply(memParameters: Seq[MemoryParameters], xLen: Int, cacheBlockBytes: Int, pageSize: BigInt): UInt => TLBPermissions = {
+  def apply(memSlaves: Seq[MemSlaveParameters], xLen: Int, cacheBlockBytes: Int, pageSize: BigInt): UInt => TLBPermissions = {
     require (isPow2(xLen) && xLen >= 8)
     require (isPow2(cacheBlockBytes) && cacheBlockBytes >= xLen/8)
     require (isPow2(pageSize) && pageSize >= cacheBlockBytes)
@@ -60,7 +60,7 @@ object TLBPageLookup
     val allSizes = TransferSizes(1, cacheBlockBytes)
     val amoSizes = TransferSizes(4, xLen/8)
 
-    val permissions = memParameters.foreach { p =>
+    val permissions = memSlaves.foreach { p =>
       require (!p.supportsGet        || p.supportsGet       .contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsGet} Get, but must support ${allSizes}")
       require (!p.supportsPutFull    || p.supportsPutFull   .contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsPutFull} PutFull, but must support ${allSizes}")
       require (!p.supportsPutPartial || p.supportsPutPartial.contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsPutPartial} PutPartial, but must support ${allSizes}")
@@ -71,7 +71,7 @@ object TLBPageLookup
       require (!(p.supportsAcquireB && p.supportsPutFull && !p.supportsAcquireT), s"Memory region '${p.name}' supports AcquireB (cached read) and PutFull (un-cached write) but not AcquireT (cached write)")
     }
 
-    val grouped = groupRegions(memParameters)
+    val grouped = groupRegions(memSlaves)
       .mapValues(_.filter(_.alignment >= pageSize)) // discard any region that's not big enough
 
     def lowCostProperty(prop: TLBFixedPermissions => Boolean): UInt => Bool = {
@@ -108,7 +108,7 @@ object TLBPageLookup
   }
 
   // Are all pageSize intervals of mapped regions homogeneous?
-  def homogeneous(memParameters: Seq[MemoryParameters], pageSize: BigInt): Boolean = {
-    groupRegions(memParameters).values.forall(_.forall(_.alignment >= pageSize))
+  def homogeneous(memSlaves: Seq[MemSlaveParameters], pageSize: BigInt): Boolean = {
+    groupRegions(memSlaves).values.forall(_.forall(_.alignment >= pageSize))
   }
 }
