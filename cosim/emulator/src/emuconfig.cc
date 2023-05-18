@@ -22,7 +22,7 @@ int emuconfig::get_tlsize(int xlen) {
 }
 
 std::string emuconfig::get_isa(int xlen) {
-  std::string isa = (xlen == 64) ? "rv64gc" : "rv32gc";
+  std::string isa = (xlen == 64) ? "rv64gc_zfh" : "rv32gc_zfh";
   return isa;
 }
 
