@@ -19,7 +19,7 @@ import mill.define.{Sources, TaskModule}
 object v {
   val scala = "2.13.10"
   val mainargs = ivy"com.lihaoyi::mainargs:0.3.0"
-  val osLib = ivy"com.lihaoyi::os-lib:latest.integration"
+  val osLib = ivy"com.lihaoyi::os-lib:0.9.1"
   val upickle = ivy"com.lihaoyi::upickle:0.7.1"
 }
 
