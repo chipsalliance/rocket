@@ -16,7 +16,7 @@ case class cosimConfig(xLength: Int) extends Config((site, here, up) => {
   case PgLevels => if (site(XLen) == 64) 3 else 2
   case RocketTileParamsKey => RocketTileParams(
     core = RocketCoreParams(mulDiv = Some(MulDivParams(
-      mulUnroll = 8,
+      mulUnroll = xLength,
       mulEarlyOut = true,
       divEarlyOut = true)),
       fpu = Some(FPUParams(fLen = xLength))),

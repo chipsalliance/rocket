@@ -134,7 +134,9 @@ private:
 
     bool waitforMutiCycleInsn;
     bool mutiCycleInsnDone;
-    uint64_t pendingInsn_pc;
+    uint32_t pendingInsn_pc;
+    uint32_t pendingInsn_waddr;
+    uint64_t pendingInsn_wdata;
 
     int get_mem_req_cycles() {
       return 1;

@@ -38,8 +38,9 @@ void VBridgeImpl::init_spike() {
   LOG(INFO) << fmt::format("Spike reset mstatus={:08X}", state->mstatus->read());
   // load binary to reset_vector
   sim.load(bin, ebin, reset_vector);
-  LOG(INFO) << fmt::format("Simulation Environment Initialized: COSIM_bin={};COSIM_entrance_bin= {};COSIM_wave={};COSIM_timeout={};COSIM_reset_vector={:#x};passaddress={:#x};xlen={}", bin, ebin, wave,timeout,
-                           reset_vector, pass_address,xlen);
+  LOG(INFO) << fmt::format(
+      "Simulation Environment Initialized: COSIM_bin={};COSIM_entrance_bin= {};COSIM_wave={};COSIM_timeout={};COSIM_reset_vector={:#x};passaddress={:#x};xlen={}",
+      bin, ebin, wave, timeout, reset_vector, pass_address, xlen);
 }
 
 void VBridgeImpl::loop_until_se_queue_full() {
@@ -113,13 +114,14 @@ std::optional<SpikeEvent> VBridgeImpl::spike_step() {
 uint64_t VBridgeImpl::get_t() {
   return getCycle();
 }
+
 //todo: mask
 uint8_t VBridgeImpl::load(uint64_t address) {
   return *sim.addr_to_mem(address & emuConfig.get_mask(xlen));
 }
 
 int VBridgeImpl::timeoutCheck() {
-  if (get_t() > timeout ) {
+  if (get_t() > timeout) {
     LOG(FATAL_S) << fmt::format("Simulation timeout, t={}", get_t());
   }
   return 0;
@@ -345,18 +347,11 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
   bool haveCommittedSe = false;
   uint64_t pc = cmInterface.wb_reg_pc;
   LOG(INFO) << fmt::format("RTL write back insn {:08X} time:={}", pc, get_t());
-  if(cmInterface.wb_reg_pc == pass_address) {throw ReturnException();}
+  if (cmInterface.wb_reg_pc == pass_address) { throw ReturnException(); }
   // Check rf write info
   if (cmInterface.rf_wen && (cmInterface.rf_waddr != 0)) {
     record_rf_access(cmInterface);
   }
-
-  if (waitforMutiCycleInsn)
-  {
-    LOG(INFO) << fmt::format("waitforMutiCycleInsn = {}", waitforMutiCycleInsn);
-    return;
-  }
-
 
   // set this spike event as committed
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
@@ -411,55 +406,55 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   bool rtl_csr = opcode == 0b1110011;
 
   // exclude those rtl reg_write from csr insn
-  if (!rtl_csr) {
-    LOG(INFO) << fmt::format("RTL wirte reg({}) = {:08X}, pc = {:08X}", waddr, wdata, pc);
-    if (waitforMutiCycleInsn) {
-      LOG(INFO) << fmt::format("Find waiting muti");
-      pc = pendingInsn_pc;
-      waitforMutiCycleInsn = false;
-      mutiCycleInsnDone = true;
-
-    }
-    // find corresponding spike event
-    SpikeEvent *se = nullptr;
-    for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-      if ((se_iter->pc == pc) && (se_iter->rd_idx == waddr) && (!se_iter->is_committed)) {
-        se = &(*se_iter);
-        break;
-      }
-    }
-    if (se == nullptr) {
-      for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-        LOG(INFO)
-            << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}", se_iter->pc,
-                           se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
-      }
-
-      LOG(FATAL_S)
-          << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , waddr={:08X}, waddr=Reg({})", pc, waddr, waddr);
-    }
-    // start to check RTL rf_write with spike event
-    // for non-store ins. check rf write
-    // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
-    if ((!se->is_store) && (!se->is_mutiCycle)) {
-//todo:mask
-      CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen) )
-        << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
-    } else if (se->is_mutiCycle) {
-      if (!mutiCycleInsnDone) {
-        waitforMutiCycleInsn = true;
-        mutiCycleInsnDone = false;
-        pendingInsn_pc = pc;
-        LOG(INFO) << fmt::format("Find MutiCycle Instruction");
-      }
-
-    } else {
-      LOG(INFO) << fmt::format("Find Store insn");
-    }
-  } else {
+  if (rtl_csr) {
     LOG(INFO) << fmt::format("RTL csr insn wirte reg({}) = {:08X}, pc = {:08X}", waddr, wdata, pc);
+    return;
   }
 
+  LOG(INFO) << fmt::format("RTL wirte reg({}) = {:08X}, pc = {:08X}", waddr, wdata, pc);
+  if (waitforMutiCycleInsn) {
+    if(waddr == pendingInsn_waddr && wdata == pendingInsn_wdata){
+      waitforMutiCycleInsn = false;
+      mutiCycleInsnDone = true;
+      LOG(INFO) << fmt::format("match mutiCycleInsn pc = {:08x}", pendingInsn_pc);
+    }
+  }
+  // find corresponding spike event
+  SpikeEvent *se = nullptr;
+  for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
+    if ((se_iter->pc == pc) && (se_iter->rd_idx == waddr) && (!se_iter->is_committed)) {
+      se = &(*se_iter);
+      break;
+    }
+  }
+  if (se == nullptr) {
+    for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
+      LOG(INFO)
+          << fmt::format("List: spike pc = {:08X}, write reg({}) from {:08x} to {:08X}, is commit:{}", se_iter->pc,
+                         se_iter->rd_idx, se_iter->rd_old_bits, se_iter->rd_new_bits, se_iter->is_committed);
+    }
+    LOG(FATAL_S)
+        << fmt::format("RTL rf_write Cannot find se ; pc = {:08X} , waddr={:08X}, waddr=Reg({})", pc, waddr, waddr);
+  }
+  // start to check RTL rf_write with spike event
+  // for non-store ins. check rf write
+  // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
+  if ((!se->is_store) && (!se->is_mutiCycle)) {
+//todo:mask
+    CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen))
+      << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
+  } else if (se->is_mutiCycle) {
+    if (!mutiCycleInsnDone) {
+      waitforMutiCycleInsn = true;
+      mutiCycleInsnDone = false;
+      pendingInsn_pc = pc;
+      pendingInsn_waddr = waddr;
+      pendingInsn_wdata = wdata;
+      LOG(INFO) << fmt::format("Find MutiCycle Instruction pc={:08X}", pendingInsn_pc);
+    }
+  } else {
+    LOG(INFO) << fmt::format("Find Store insn");
+  }
 }
 
 VBridgeImpl vbridge_impl_instance;

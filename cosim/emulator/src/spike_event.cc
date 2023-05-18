@@ -114,9 +114,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
 
   // extension depending parameter
   is_compress = false;
-  if (fetch.insn.length() == 2) {
-    is_compress = true;
-  }
+  if (fetch.insn.length() == 2) is_compress = true;
   if (!is_compress) {
     rs1_bits = xr[fetch.insn.rs1()];
     rs2_bits = xr[fetch.insn.rs2()];
@@ -132,14 +130,15 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
     is_store = opcode == 0b100011 || (opcode == 0b0100111);
     is_amo = opcode == 0b0101111;
 
-    is_mutiCycle = (opcode == 0b0110011) && (func7 == 0b1);
+    //decode for M extension
+    is_mutiCycle = (opcode == 0b0110011 || opcode == 0b0111011) && (func7 == 0b1);
 
     if (is_load) {
       target_mem = rs1_bits + fetch.insn.i_imm();
     }
     if (is_store) target_mem = rs1_bits + fetch.insn.s_imm();
     if (is_amo) target_mem = rs1_bits;
-  } else {
+  } else {//decode for C extension
     uint8_t op = inst_bits & 0b11;
     uint8_t func3 = (inst_bits & 0xE000) >> 13;
     uint64_t rs1s_bits = xr[fetch.insn.rvc_rs1s()];
@@ -241,7 +240,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
   is_trap = false;
 
   satp = proc.get_state()->satp->read();
-  //todo:configre it
+
   satp_ppn = satp & 0xFFFFFFFFFFF;
   satp_mode = clip(satp, 60, 63);
 

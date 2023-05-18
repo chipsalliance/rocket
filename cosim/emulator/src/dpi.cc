@@ -26,7 +26,7 @@ void sigint_handler(int s) {
     if (!terminated) {action}          \
   } catch (ReturnException &e) { \
     terminated = true;                \
-    LOG(INFO) << fmt::format("detect returning instruction, gracefully quit simulation");                  \
+    LOG(INFO) << fmt::format("test passed, gracefully quit simulation");                  \
     dpiFinish();    \
   } catch (std::runtime_error &e) { \
     terminated = true;                \
