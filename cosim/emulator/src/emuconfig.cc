@@ -1,6 +1,6 @@
 #include "emuconfig.h"
 
-emuconfig::emuconfig(){
+emuconfig::emuconfig() {
 }
 
 int emuconfig::get_xlen(int xlen) {

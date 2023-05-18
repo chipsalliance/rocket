@@ -107,7 +107,6 @@ private:
     const uint64_t pass_address = std::stoul(get_env_arg("passaddress"), nullptr, 16);
 
 
-
     //Spike
     const size_t to_rtl_queue_size = 10;
     std::list<SpikeEvent> to_rtl_queue;

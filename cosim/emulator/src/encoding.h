@@ -1,18 +1,7 @@
 #pragma once
 
 namespace TlOpcode {
-    constexpr int
-        AcquireBlock = 6,
-        Get = 4,
-        AccessAckData = 1,
-        PutFullData = 0,
-        PutPartialData = 1,
-        AccessAck = 4,
-        Grant = 4,
-        GrantData = 5,
-        Release = 6 ,
-        ReleaseData = 7,
-        ReleaseAck = 6;
+    constexpr int AcquireBlock = 6, Get = 4, AccessAckData = 1, PutFullData = 0, PutPartialData = 1, AccessAck = 4, Grant = 4, GrantData = 5, Release = 6, ReleaseData = 7, ReleaseAck = 6;
 }
 
 struct TlAPeekInterface {

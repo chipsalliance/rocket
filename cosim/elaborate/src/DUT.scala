@@ -81,10 +81,10 @@ class DUT(xLen:Int)(p: Parameters) extends Module {
     }
   })
   //todo: config databits with xlen
-  val tlAParam = TileLinkChannelAParameter(32,2,xlen,3)
-  val tlBParam = TileLinkChannelBParameter(32,2,xlen,3)
-  val tlCParam = TileLinkChannelCParameter(32,2,xlen,3)
-  val tlDParam = TileLinkChannelDParameter(2,3,xlen,3)
+  val tlAParam = TileLinkChannelAParameter(32, 2, xlen, 3)
+  val tlBParam = TileLinkChannelBParameter(32, 2, xlen, 3)
+  val tlCParam = TileLinkChannelCParameter(32, 2, xlen, 3)
+  val tlDParam = TileLinkChannelDParameter(2, 3, xlen, 3)
   val tlEParam = TileLinkChannelEParameter(2)
 
   val memory_0_a = IO(Decoupled(new TLChannelA(tlAParam)))

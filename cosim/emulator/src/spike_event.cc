@@ -132,7 +132,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
     is_store = opcode == 0b100011 || (opcode == 0b0100111);
     is_amo = opcode == 0b0101111;
 
-    is_mutiCycle = (opcode == 0b0110011)&&(func7 == 0b1);
+    is_mutiCycle = (opcode == 0b0110011) && (func7 == 0b1);
 
     if (is_load) {
       target_mem = rs1_bits + fetch.insn.i_imm();

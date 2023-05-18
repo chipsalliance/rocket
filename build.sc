@@ -126,12 +126,14 @@ object diplomatic extends common.DiplomaticModule {
 
 object cosim extends Module {
   // all xlen from here
-  object elaborate extends Cross[elaborate]("32","64")
+  object elaborate extends Cross[elaborate]("32", "64")
+
   class elaborate(xLen: String) extends ScalaModule with ScalafmtModule {
 
     def millSourcePath = super.millSourcePath / os.up
 
     def sources = T.sources(millSourcePath)
+
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
     }
@@ -161,14 +163,14 @@ object cosim extends Module {
         runClasspath().map(_.path),
         Seq(
           "--dir", T.dest.toString,
-          "--xlen",xLen
+          "--xlen", xLen
         ),
       )
       PathRef(T.dest)
     }
 
-    def crossprint = T{
-      println("xlen"+xLen)
+    def crossprint = T {
+      println("xlen" + xLen)
     }
 
     def chiselAnno = T {
@@ -185,7 +187,7 @@ object cosim extends Module {
 
   }
 
-  object mfccompile extends Cross[mfccompile]("32","64")
+  object mfccompile extends Cross[mfccompile]("32", "64")
 
   class mfccompile(xLen: String) extends Module {
 
@@ -230,7 +232,8 @@ object cosim extends Module {
     }
   }
 
-  object emulator extends Cross[emulator]("32","64")
+  object emulator extends Cross[emulator]("32", "64")
+
   class emulator(xLen: String) extends Module {
 
     def millSourcePath = super.millSourcePath / os.up
@@ -553,8 +556,8 @@ object cases extends Module {
 
       object `rv32` extends Suite {
         override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter (p =>
-            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p") ).filterNot(p =>
+          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
+            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p")).filterNot(p =>
             p.last.startsWith("rv32ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("rv32mi-p-scall") | p.last.endsWith("rv32si-p-wfi") | p.last.endsWith("rv32si-p-dirty") | p.last.endsWith("rv32mi-p-breakpoint")).map(PathRef(_))
         }
       }
@@ -581,6 +584,7 @@ object tests extends Module() {
         PathRef(T.dest)
       }
     }
+
     object smoketest extends Test {}
   }
 

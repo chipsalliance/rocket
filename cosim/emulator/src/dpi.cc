@@ -72,9 +72,9 @@ dpiPeekTL(const svBitVecVal *pc, const svBitVecVal *a_opcode, const svBitVecVal 
   TRY({
         vbridge_impl_instance.dpiPeekTL(miss, *pc,
                                         TlAPeekInterface{*a_opcode, *a_param, *a_size, *a_source, *a_address, *a_mask,
-                                                        *a_data, a_corrupt, a_valid, d_ready},
+                                                         *a_data, a_corrupt, a_valid, d_ready},
                                         TlCPeekInterface{*c_opcode, *c_param, *c_size, *c_source, *c_address, *c_data,
-                                                     c_corrupt, c_valid});
+                                                         c_corrupt, c_valid});
       })
 }
 
@@ -102,8 +102,8 @@ dpiPokeTL(svBitVecVal *d_bits_data_high, svBitVecVal *d_bits_data_low, svBitVecV
 }
 
 [[maybe_unused]] void
-dpiCommitPeek(svBit rf_wen, svBit wb_valid, const svBitVecVal *rf_waddr, const svBitVecVal *rf_wdata_high,const svBitVecVal *rf_wdata_low,
-              const svBitVecVal *wb_reg_pc, const svBitVecVal *wb_reg_inst) {
+dpiCommitPeek(svBit rf_wen, svBit wb_valid, const svBitVecVal *rf_waddr, const svBitVecVal *rf_wdata_high,
+              const svBitVecVal *rf_wdata_low, const svBitVecVal *wb_reg_pc, const svBitVecVal *wb_reg_inst) {
   TRY({
         vbridge_impl_instance.dpiCommitPeek(
             CommitPeekInterface{rf_wen, wb_valid, *rf_waddr, *rf_wdata_high, *rf_wdata_low, *wb_reg_pc, *wb_reg_inst});
