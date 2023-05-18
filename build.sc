@@ -546,7 +546,7 @@ object cases extends Module {
       object `rv64` extends Suite {
         override def binaries = T {
           os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
-            p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p") | p.last.startsWith("rv64ud-p")).filterNot(p =>
+            p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p") | p.last.startsWith("rv64ud-p") | p.last.startsWith("rv64uc-p")).filterNot(p =>
             p.last.startsWith("rv64ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("rv64mi-p-breakpoint") | p.last.endsWith("rv64si-p-icache-alias") | p.last.endsWith("rv64ui-p-ma_data") | p.last.endsWith("rv64si-p-wfi") | p.last.endsWith("rv64mi-p-scall")).map(PathRef(_))
         }
       }
@@ -554,8 +554,8 @@ object cases extends Module {
       object `rv32` extends Suite {
         override def binaries = T {
           os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter (p =>
-            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p")).filterNot(p =>
-            p.last.startsWith("rv32ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("scall") | p.last.endsWith("rv32si-p-wfi") | p.last.endsWith("rv32si-p-dirty") | p.last.endsWith("rv32mi-p-breakpoint")).map(PathRef(_))
+            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p") ).filterNot(p =>
+            p.last.startsWith("rv32ui-p-simple") | p.last.endsWith("csr") | p.last.endsWith("rv32mi-p-scall") | p.last.endsWith("rv32si-p-wfi") | p.last.endsWith("rv32si-p-dirty") | p.last.endsWith("rv32mi-p-breakpoint")).map(PathRef(_))
         }
       }
     }
