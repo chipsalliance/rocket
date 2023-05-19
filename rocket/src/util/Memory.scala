@@ -4,6 +4,7 @@ package org.chipsalliance.rocket.util
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.experimental._
 
 import org.chipsalliance.rocket._
 
@@ -95,23 +96,24 @@ object TransferSizes {
 // Base is the base address, and mask are the bits consumed by the manager
 // e.g: base=0x200, mask=0xff describes a device managing 0x200-0x2ff
 // e.g: base=0x1000, mask=0xf0f decribes a device managing 0x1000-0x100f, 0x1100-0x110f, ...
-case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet]
+case class AddressSet(val bitSet: BitSet) extends Ordered[AddressSet]
 {
-  // Forbid misaligned base address (and empty sets)
-  require ((base & mask) == 0, s"Mis-aligned AddressSets are forbidden, got: ${this.toString}")
-  require (base >= 0, s"AddressSet negative base is ambiguous: $base") // TL2 address widths are not fixed => negative is ambiguous
-  // We do allow negative mask (=> ignore all high bits)
+  // TODO: This assumption might not hold true after BitSet intersection or subtraction. It is highly depended on the concrete implementation of BitSet.
+  require(bitSet.terms.size == 1, "The wrapped BitSet should only have one BitPat")
 
-  def contains(x: BigInt) = ((x ^ base) & ~mask) == 0
-  def contains(x: UInt) = ((x ^ base.U).zext & (~mask).S) === 0.S
+  val base = bitSet.terms.head.value
+  val mask = bitSet.terms.head.mask
+
+  def contains(x: BigInt) = bitSet matches x.U
+  def contains(x: UInt) = bitSet matches x
 
   // turn x into an address contained in this set
   def legalize(x: UInt): UInt = base.U | (mask.U & x)
 
   // overlap iff bitwise: both care (~mask0 & ~mask1) => both equal (base0=base1)
-  def overlaps(x: AddressSet) = (~(mask | x.mask) & (base ^ x.base)) == 0
+  def overlaps(x: AddressSet) = bitSet overlap x.bitSet
   // contains iff bitwise: x.mask => mask && contains(x.base)
-  def contains(x: AddressSet) = ((x.mask | (base ^ x.base)) & ~mask) == 0
+  def contains(x: AddressSet) = bitSet cover x.bitSet
 
   // The number of bytes to which the manager must be aligned
   def alignment = ((mask + 1) & ~mask)
@@ -129,21 +131,12 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet]
     if (!overlaps(x)) {
       None
     } else {
-      val r_mask = mask & x.mask
-      val r_base = base | x.base
-      Some(AddressSet(r_base, r_mask))
+      Some(AddressSet(bitSet intersect x.bitSet))
     }
   }
 
   def subtract(x: AddressSet): Seq[AddressSet] = {
-    intersect(x) match {
-      case None => Seq(this)
-      case Some(remove) => AddressSet.enumerateBits(mask & ~remove.mask).map { bit =>
-        val nmask = (mask & (bit-1)) | remove.mask
-        val nbase = (remove.base ^ bit) & ~nmask
-        AddressSet(nbase, nmask)
-      }
-    }
+    (bitSet intersect x.bitSet).terms.toSeq.map(p => AddressSet(BitSet(p)))
   }
 
   // AddressSets have one natural Ordering (the containment order, if contiguous)
@@ -176,6 +169,15 @@ case class AddressSet(base: BigInt, mask: BigInt) extends Ordered[AddressSet]
 
 object AddressSet
 {
+  def apply(base: BigInt, mask: BigInt): AddressSet = {
+    // Forbid misaligned base address (and empty sets)
+    require ((base & mask) == 0, s"Mis-aligned AddressSets are forbidden, got: ${this.toString}")
+    require (base >= 0, s"AddressSet negative base is ambiguous: $base") // TL2 address widths are not fixed => negative is ambiguous
+    // We do allow negative mask (=> ignore all high bits)
+
+    AddressSet(BitSet(new BitPat(base, mask, base.U.getWidth max mask.U.getWidth)))
+  }
+
   val everything = AddressSet(0, -1)
   def misaligned(base: BigInt, size: BigInt, tail: Seq[AddressSet] = Seq()): Seq[AddressSet] = {
     if (size == 0) tail.reverse else {
@@ -190,11 +192,11 @@ object AddressSet
 
   def unify(seq: Seq[AddressSet], bit: BigInt): Seq[AddressSet] = {
     // Pair terms up by ignoring 'bit'
-    seq.distinct.groupBy(x => x.copy(base = x.base & ~bit)).map { case (key, seq) =>
+    seq.distinct.groupBy(x => AddressSet(x.base & ~bit, x.mask)).map { case (key, seq) =>
       if (seq.size == 1) {
         seq.head // singleton -> unaffected
       } else {
-        key.copy(mask = key.mask | bit) // pair - widen mask by bit
+        AddressSet(key.base, key.mask | bit) // pair - widen mask by bit
       }
     }.toList
   }
