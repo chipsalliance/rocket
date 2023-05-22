@@ -1,6 +1,8 @@
 // See LICENSE.SiFive for license details.
 // See LICENSE.Berkeley for license details.
 
+// TODO: Should be upstreamed to Chisel
+
 package org.chipsalliance.rocket.util
 
 import chisel3._

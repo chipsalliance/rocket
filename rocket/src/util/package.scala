@@ -9,19 +9,6 @@ import scala.math.min
 import scala.collection.{immutable, mutable}
 
 package object util {
-  def OptimizationBarrier[T <: Data](in: T): T = {
-    val barrier = Module(new Module {
-      val io = IO(new Bundle {
-        val x = Input(chiselTypeOf(in))
-        val y = Output(chiselTypeOf(in))
-      })
-      io.y := io.x
-      override def desiredName = "OptimizationBarrier"
-    })
-    barrier.io.x := in
-    barrier.io.y
-  }
-
   def bitIndexes(x: BigInt, tail: Seq[Int] = Nil): Seq[Int] = {
     require (x >= 0)
     if (x == 0) {
