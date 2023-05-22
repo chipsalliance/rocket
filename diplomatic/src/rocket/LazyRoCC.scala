@@ -49,8 +49,8 @@ class RoCCCoreIO(implicit p: Parameters) extends CoreBundle()(p) {
 
 class RoCCIO(val nPTWPorts: Int)(implicit p: Parameters) extends RoCCCoreIO()(p) {
   val ptw = Vec(nPTWPorts, new TLBPTWIO)
-  val fpu_req = Decoupled(new FPInput(fLen))
-  val fpu_resp = Flipped(Decoupled(new FPResult(fLen)))
+  val fpu_req = Decoupled(new FPInput)
+  val fpu_resp = Flipped(Decoupled(new FPResult))
 }
 
 /** Base classes for Diplomatic TL2 RoCC units **/
@@ -98,7 +98,7 @@ trait HasLazyRoCCModule extends CanHavePTWModule
     fpuOpt foreach { fpu =>
       val nFPUPorts = outer.roccs.count(_.usesFPU)
       if (usingFPU && nFPUPorts > 0) {
-        val fpArb = Module(new InOrderArbiter(new FPInput(fLen)))
+        val fpArb = Module(new InOrderArbiter(new FPInput()(outer.p), new FPResult()(outer.p), nFPUPorts))
         val fp_rocc_ios = outer.roccs.filter(_.usesFPU).map(_.module.io)
         fpArb.io.in_req <> fp_rocc_ios.map(_.fpu_req)
         fp_rocc_ios.zip(fpArb.io.in_resp).foreach {

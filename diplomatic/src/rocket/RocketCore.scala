@@ -76,7 +76,6 @@ trait HasRocketCoreParameters extends HasCoreParameters {
 
   val mulDivParams = rocketParams.mulDiv.getOrElse(MulDivParams()) // TODO ask andrew about this
 
-  val usingClockGating = clockGate
   val usingABLU = usingBitManip || usingBitManipCrypto
   val aluFn = if (usingABLU) new ABLUFN else new ALUFN
 
