@@ -120,8 +120,6 @@ object diplomatic extends common.DiplomaticModule {
   def rocketModule = rocket
 
   def rocketchipModule = myrocketchip
-
-  override def scalacOptions = T(Seq(s"-Xplugin:${mychisel3.plugin.jar().path}"))
 }
 
 object cosim extends Module {
