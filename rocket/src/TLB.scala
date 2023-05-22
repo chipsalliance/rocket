@@ -161,7 +161,7 @@ class TLBEntry(
   /** returns the index of sector */
   private def sectorIdx(vpn: UInt) = vpn(log2Ceil(nSectors) - 1, 0)
   /** returns the entry data matched with this vpn*/
-  def getData(vpn: UInt) = OptimizationBarrier(data(sectorIdx(vpn)).asTypeOf(new TLBEntryData(ppnBits)))
+  def getData(vpn: UInt) = data(sectorIdx(vpn)).asTypeOf(new TLBEntryData(ppnBits))
   /** returns whether a sector hits */
   def sectorHit(vpn: UInt, virtual: Bool) = valid.asUInt.orR && sectorTagMatch(vpn, virtual)
   /** returns whether tag matches vpn */
