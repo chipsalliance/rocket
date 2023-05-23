@@ -350,7 +350,6 @@ object cases extends Module {
       Lib.findSourceFiles(sources(), Seq("S", "s", "c", "cpp")).map(PathRef(_))
     }
 
-    //default to 64
     def xlen: Int = 64
 
     def linkScript: T[PathRef] = T {
@@ -383,179 +382,67 @@ object cases extends Module {
 
   object riscvtests extends Module {
 
-    c =>
-    trait Suite extends Module {
-      def name: T[String]
+    def testsRoot =
+      os.Path(sys.env("RISCV_TESTS_ROOT")) / "share" / "riscv-tests"
 
-      def description: T[String]
-
-      def binaries: T[Seq[PathRef]]
+    def alltests = os.walk(testsRoot).filterNot(p => p.last.endsWith("dump")).filter(p => p.last.startsWith("rv")).map(c=>c.last)
+    
+    def target = T {
+      os.walk(testsRoot).filter(p => p.last.startsWith("rv")).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
     }
 
-    object test extends Module {
-      trait Suite extends c.Suite {
-        def testsRoot =
-          os.Path(sys.env("RISCV_TESTS_ROOT")) / "share" / "riscv-tests"
+    def init = T {
+      target().map(bin => {
+        os.proc("cp", bin.path, "./" + bin.path.last + ".elf").call(T.dest)
+        os.proc("llvm-objcopy", "-O", "binary", bin.path.last + ".elf", bin.path.last).call(T.dest)
+      })
+      PathRef(T.dest)
+    }
 
-        def name = T {
-          millSourcePath.last
-        }
-
-        def description = T {
-          s"test suite ${name} from riscv-tests"
-        }
-
-        def target = T.persistent {
-          os.walk(testsRoot).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
-        }
-
-        def init = T.persistent {
-          target().map(bin => {
-            os.proc("cp", bin.path, "./" + bin.path.last + ".elf").call(T.dest)
-            os.proc("llvm-objcopy", "-O", "binary", bin.path.last + ".elf", bin.path.last).call(T.dest)
-          })
-          PathRef(T.dest)
-        }
-
-        def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))
-        }
-      }
-
-      object `rv32mi-p` extends Suite
-
-      object `rv32mi-p-lh` extends Suite
-
-      object `rv32mi-p-lw` extends Suite
-
-      object `rv32mi-p-sh` extends Suite
-
-      object `rv32mi-p-sw` extends Suite
-
-      object `rv32si-p` extends Suite
-
-      object `rv32ua-p` extends Suite
-
-      object `rv32ua-v` extends Suite
-
-      object `rv32uc-p` extends Suite
-
-      object `rv32uc-v` extends Suite
-
-      object `rv32ud-p` extends Suite
-
-      object `rv32ud-v` extends Suite
-
-      object `rv32uf-p` extends Suite
-
-      object `rv32uf-v` extends Suite
-
-      object `rv32ui-p` extends Suite
-
-      object `rv32ui-v` extends Suite
-
-      object `rv32um-p` extends Suite
-
-      object `rv32um-v` extends Suite
-
-      object `rv32uzfh-p` extends Suite
-
-      object `rv32uzfh-v` extends Suite
-
-      object `rv64mi-p` extends Suite
-
-      object `rv64mi-p-ld` extends Suite
-
-      object `rv64mi-p-lh` extends Suite
-
-      object `rv64mi-p-lw` extends Suite
-
-      object `rv64mi-p-sd` extends Suite
-
-      object `rv64mi-p-sh` extends Suite
-
-      object `rv64mi-p-sw` extends Suite
-
-      object `rv64mzicbo-p` extends Suite
-
-      object `rv64si-p` extends Suite
-
-      object `rv64si-p-icache` extends Suite
-
-      object `rv64ssvnapot-p` extends Suite
-
-      object `rv64ua-p` extends Suite
-
-      object `rv64ua-v` extends Suite
-
-      object `rv64uc-p` extends Suite
-
-      object `rv64uc-v` extends Suite
-
-      object `rv64ud-p` extends Suite
-
-      object `rv64ud-v` extends Suite
-
-      object `rv64uf-p` extends Suite
-
-      object `rv64uf-v` extends Suite
-
-      object `rv64ui-p` extends Suite
-
-      object `rv64ui-v` extends Suite
-
-      object `rv64um-p` extends Suite
-
-      object `rv64um-v` extends Suite
-
-      object `rv64uzfh-p` extends Suite
-
-      object `rv64uzfh-v` extends Suite
-
-      object `rv64` extends Suite {
-        override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
-            p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p") | p.last.startsWith("rv64ud-p") | p.last.startsWith("rv64uc-p") | p.last.startsWith("rv64um-p") | p.last.startsWith("rv64uzfh-p")).filterNot(p =>
-            p.last.startsWith("rv64ui-p-simple")//have no <pass> symbol in elf
-              | p.last.endsWith("csr") //MISA differs between Rocket and Spike
-              | p.last.endsWith("rv64mi-p-breakpoint") // Requires debug module
-              | p.last.endsWith("rv64si-p-icache-alias") // infinit loop after trap_machine_ecall at 0x8000012b8
-              | p.last.endsWith("rv64ui-p-ma_data") // https://github.com/riscv-software-src/riscv-tests/issues/419
-              | p.last.endsWith("rv64si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001ac
-              | p.last.endsWith("rv64mi-p-scall")) // infinit loop after trap_supervisor_ecall at 0x800001ec
-            .map(PathRef(_))
-        }
-      }
-
-      object `rv32` extends Suite {
-        override def binaries = T {
-          os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).filter(p =>
-            p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p") | p.last.startsWith("rv32um-p") | p.last.startsWith("rv32uzfh-p")).filterNot(p =>
-            p.last.startsWith("rv32ui-p-simple")
-              | p.last.endsWith("csr") // MISA differs
-              | p.last.endsWith("rv32mi-p-breakpoint") // Requires debug module
-              | p.last.endsWith("rv32mi-p-scall") // infinit loop after trap_user_ecall at 0x800001c8
-              | p.last.endsWith("rv32si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001a8
-              | p.last.endsWith("rv32si-p-dirty")) // infinit loop after trap_machine_ecall at 0x80000027c
-            .map(PathRef(_))
+    class Suite(casename:String) extends ScalaModule with ScalafmtModule {
+      override def scalaVersion = v.scala
+      def binaries = T{
+        casename match {
+          case "rv64"=>{
+            os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).filter(p =>
+              p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p") | p.last.startsWith("rv64ud-p") | p.last.startsWith("rv64uc-p") | p.last.startsWith("rv64um-p") | p.last.startsWith("rv64uzfh-p")).filterNot(p =>
+              p.last.startsWith("rv64ui-p-simple") //have no <pass> symbol in elf
+                | p.last.endsWith("csr") //MISA differs between Rocket and Spike
+                | p.last.endsWith("rv64mi-p-breakpoint") // Requires debug module
+                | p.last.endsWith("rv64si-p-icache-alias") // infinit loop after trap_machine_ecall at 0x8000012b8
+                | p.last.endsWith("rv64ui-p-ma_data") // https://github.com/riscv-software-src/riscv-tests/issues/419
+                | p.last.endsWith("rv64si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001ac
+                | p.last.endsWith("rv64mi-p-scall")) // infinit loop after trap_supervisor_ecall at 0x800001ec
+              .map(PathRef(_))}
+          case "rv32"=>{
+            os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).filter(p =>
+              p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p") | p.last.startsWith("rv32um-p") | p.last.startsWith("rv32uzfh-p")).filterNot(p =>
+              p.last.startsWith("rv32ui-p-simple")
+                | p.last.endsWith("csr") // MISA differs
+                | p.last.endsWith("rv32mi-p-breakpoint") // Requires debug module
+                | p.last.endsWith("rv32mi-p-scall") // infinit loop after trap_user_ecall at 0x800001c8
+                | p.last.endsWith("rv32si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001a8
+                | p.last.endsWith("rv32si-p-dirty")) // infinit loop after trap_machine_ecall at 0x80000027c
+              .map(PathRef(_))}
+          case _ =>{os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))}
         }
       }
     }
+
+    object rvcase extends Cross[Suite](alltests:+"rv64":+"rv32": _*)
+
   }
 }
 
 object tests extends Module() {
   object riscvtests extends Module {
+    class run(casename: String) extends ScalaModule with ScalafmtModule {
+      override def scalaVersion = v.scala
+      def bin = cases.riscvtests.rvcase(casename).binaries
+      def xlen = if(casename.startsWith("rv64")) "64" else "32"
+      override def defaultCommandName() = "test"
 
-    trait Test extends TaskModule {
-
-      def xlen = "64"
-
-      override def defaultCommandName() = "run"
-
-      def bin: T[Seq[PathRef]]
-
-      def run(args: String*) = T.command {
+      def test(args: String*) = T.command {
         bin().map { c =>
           val name = c.path.last
           val entrancePath = if (xlen == "64") cases.entrance64.compile().path.toString else cases.entrance32.compile().path.toString
@@ -588,80 +475,7 @@ object tests extends Module() {
 
     }
 
-    object `rv64` extends Test {
-      def bin = cases.riscvtests.test.`rv64`.binaries
-    }
-
-    object `rv32` extends Test {
-      def bin = cases.riscvtests.test.`rv32`.binaries
-
-      override def xlen = "32"
-    }
-
-    object `rv64si-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64si-p`.binaries
-    }
-
-
-    object `rv64mi-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64mi-p`.binaries
-    }
-
-    object `rv64ua-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64ua-p`.binaries
-    }
-
-    object `rv64ua-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64ua-v`.binaries
-    }
-
-    object `rv64uc-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64uc-p`.binaries
-    }
-
-    object `rv64uc-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64uc-v`.binaries
-    }
-
-    object `rv64ud-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64ud-p`.binaries
-    }
-
-    object `rv64ud-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64ud-v`.binaries
-    }
-
-    object `rv64uf-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64uf-p`.binaries
-    }
-
-    object `rv64uf-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64uf-v`.binaries
-    }
-
-    object `rv64ui-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64ui-p`.binaries
-    }
-
-    object `rv64ui-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64ui-v`.binaries
-    }
-
-    object `rv64uzfh-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64uzfh-p`.binaries
-    }
-
-    object `rv64uzfh-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64uzfh-p`.binaries
-    }
-
-    object `rv64um-p` extends Test {
-      def bin = cases.riscvtests.test.`rv64um-p`.binaries
-    }
-
-    object `rv64um-v` extends Test {
-      def bin = cases.riscvtests.test.`rv64um-v`.binaries
-    }
+    object run extends Cross[run](cases.riscvtests.alltests:+"rv64":+"rv32": _*)
 
   }
 }

@@ -18,7 +18,7 @@ class TestBench(xLen: Int) extends RawModule {
   val reset = Wire(Bool())
   val dut = withClockAndReset(clock, reset) {
     Module(
-      new DUT(xLen)(cosimConfig(xLen))
+      new DUT(xLen)(CosimConfig(xLen))
     )
   }
   val verificationModule = Module(new VerificationModule(dut))

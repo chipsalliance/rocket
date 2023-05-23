@@ -9,10 +9,10 @@ import org.chipsalliance.rocket._
 
 object RocketTileParamsKey extends Field[RocketTileParams]
 
-case class cosimConfig(xLength: Int) extends Config((site, here, up) => {
+case class CosimConfig(xLength: Int) extends Config((site, here, up) => {
   case MonitorsEnabled => false
   case XLen => xLength
-  case MaxHartIdBits => 4
+  case MaxHartIdBits => 1
   case PgLevels => if (site(XLen) == 64) 3 else 2
   case RocketTileParamsKey => RocketTileParams(
     core = RocketCoreParams(mulDiv = Some(MulDivParams(

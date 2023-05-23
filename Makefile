@@ -26,14 +26,11 @@ compile:
 elf:
 	mill -i -j 0 cosim.emulator.elf
 
-test:
-	mill -i -j 0 tests.run.rv64default.run
-
 riscv64tests:
-	mill -i -j 0 tests.riscvtests.rv64
+	mill -i -j 0 tests.riscvtests.run[rv64]
 
 riscv32tests:
-	mill -i -j 0 tests.riscvtests.rv32
+	mill -i -j 0 tests.riscvtests.run[rv32]
 
 clean:
 	git clean -fd
