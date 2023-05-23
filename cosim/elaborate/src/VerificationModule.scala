@@ -137,10 +137,12 @@ class VerificationModule(dut:DUT) extends TapModule {
     val wb_reg_pc   = IO(Input(UInt(32.W)))
     val wb_reg_inst = IO(Input(UInt(32.W)))
     val wb_valid    = IO(Input(Bool()))
+    val ll_wen      = IO(Input(Bool()))
       setInline(
         s"$desiredName.sv",
         s"""module $desiredName(
            |  input clock,
+           |  input ll_wen,
            |  input rf_wen,
            |  input wb_valid,
            |  input [31:0] rf_waddr,
@@ -154,6 +156,7 @@ class VerificationModule(dut:DUT) extends TapModule {
            |  assign rf_wdata_low  = rf_wdata[31:0];
            |
            |  import "DPI-C" function void $desiredName(
+           |  input ll_wen,
            |  input bit rf_wen,
            |  input bit wb_valid,
            |  input bit[31:0] rf_waddr,
@@ -163,6 +166,7 @@ class VerificationModule(dut:DUT) extends TapModule {
            |  input bit[31:0] wb_reg_inst
            |  );
            |  always @ (posedge clock) #($latPeekCommit) $desiredName(
+           |  ll_wen,
            |  rf_wen,
            |  wb_valid,
            |  rf_waddr,
@@ -177,6 +181,7 @@ class VerificationModule(dut:DUT) extends TapModule {
       )
   })
   //todo:use rf_ext_w0_en
+  dpiCommitPeek.ll_wen      := tap(dut.ldut.rocketTile.module.core.rocketImpl.ll_wen)
   dpiCommitPeek.rf_wen      := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_wen)
   dpiCommitPeek.rf_waddr    := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_waddr)
   dpiCommitPeek.rf_wdata    := tap(dut.ldut.rocketTile.module.core.rocketImpl.rf_wdata)

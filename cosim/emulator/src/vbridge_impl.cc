@@ -342,10 +342,22 @@ void VBridgeImpl::dpiRefillQueue() {
 
 // enter -> check rf write -> commit se -> pop se
 void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
-
-  if (cmInterface.wb_valid == 0) return;
+  if (cmInterface.wb_valid == 0 && cmInterface.ll_wen == 0) return;
   bool haveCommittedSe = false;
   uint64_t pc = cmInterface.wb_reg_pc;
+
+  if(cmInterface.ll_wen){
+    uint64_t wdata_low = cmInterface.rf_wdata_low;
+    uint64_t wdata_high = cmInterface.rf_wdata_high;
+    uint64_t wdata = wdata_low + (wdata_high << 32);
+    if (waitforMutiCycleInsn) {
+      if(cmInterface.rf_waddr == pendingInsn_waddr && wdata == pendingInsn_wdata){
+        waitforMutiCycleInsn = false;
+        LOG(INFO) << fmt::format("match mutiCycleInsn pc = {:08x}", pendingInsn_pc);
+      }
+    }
+    return;
+  }
   LOG(INFO) << fmt::format("RTL write back insn {:08X} time:={}", pc, get_t());
   if (cmInterface.wb_reg_pc == pass_address) { throw ReturnException(); }
   // Check rf write info
@@ -355,7 +367,7 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
 
   // set this spike event as committed
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-    if (se_iter->pc == pc) {
+    if (se_iter->pc == pc ) {
       // mechanism to the insn which causes trap.
       // trapped insn will commit with the first insn after trap(0x80000004).
       // It demands the trap insn not to be the last one in the queue.
@@ -370,18 +382,6 @@ void VBridgeImpl::dpiCommitPeek(CommitPeekInterface cmInterface) {
       break;
     }
   }
-
-  // set muticycleInsn as committed
-  for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
-    if (se_iter->pc == pendingInsn_pc) {
-      pendingInsn_pc = 0;
-      se_iter->is_committed = true;
-      haveCommittedSe = true;
-      LOG(INFO) << fmt::format("Set spike {:08X} as committed", se_iter->pc);
-      break;
-    }
-  }
-
 
   if (!haveCommittedSe) LOG(INFO) << fmt::format("RTL wb without se in pc =  {:08X}", pc);
   // pop the committed Event from the queue
@@ -412,13 +412,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   }
 
   LOG(INFO) << fmt::format("RTL wirte reg({}) = {:08X}, pc = {:08X}", waddr, wdata, pc);
-  if (waitforMutiCycleInsn) {
-    if(waddr == pendingInsn_waddr && wdata == pendingInsn_wdata){
-      waitforMutiCycleInsn = false;
-      mutiCycleInsnDone = true;
-      LOG(INFO) << fmt::format("match mutiCycleInsn pc = {:08x}", pendingInsn_pc);
-    }
-  }
+
   // find corresponding spike event
   SpikeEvent *se = nullptr;
   for (auto se_iter = to_rtl_queue.rbegin(); se_iter != to_rtl_queue.rend(); se_iter++) {
@@ -444,14 +438,11 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
     CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen))
       << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
   } else if (se->is_mutiCycle) {
-    if (!mutiCycleInsnDone) {
       waitforMutiCycleInsn = true;
-      mutiCycleInsnDone = false;
       pendingInsn_pc = pc;
-      pendingInsn_waddr = waddr;
-      pendingInsn_wdata = wdata;
+      pendingInsn_waddr = se->rd_idx;
+      pendingInsn_wdata = se->rd_new_bits;
       LOG(INFO) << fmt::format("Find MutiCycle Instruction pc={:08X}", pendingInsn_pc);
-    }
   } else {
     LOG(INFO) << fmt::format("Find Store insn");
   }

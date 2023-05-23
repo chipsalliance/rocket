@@ -102,11 +102,11 @@ dpiPokeTL(svBitVecVal *d_bits_data_high, svBitVecVal *d_bits_data_low, svBitVecV
 }
 
 [[maybe_unused]] void
-dpiCommitPeek(svBit rf_wen, svBit wb_valid, const svBitVecVal *rf_waddr, const svBitVecVal *rf_wdata_high,
+dpiCommitPeek(svBit ll_wen, svBit rf_wen, svBit wb_valid, const svBitVecVal *rf_waddr, const svBitVecVal *rf_wdata_high,
               const svBitVecVal *rf_wdata_low, const svBitVecVal *wb_reg_pc, const svBitVecVal *wb_reg_inst) {
   TRY({
         vbridge_impl_instance.dpiCommitPeek(
-            CommitPeekInterface{rf_wen, wb_valid, *rf_waddr, *rf_wdata_high, *rf_wdata_low, *wb_reg_pc, *wb_reg_inst});
+            CommitPeekInterface{ll_wen, rf_wen, wb_valid, *rf_waddr, *rf_wdata_high, *rf_wdata_low, *wb_reg_pc, *wb_reg_inst});
       })
 
 

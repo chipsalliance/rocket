@@ -51,6 +51,7 @@ struct TlPokeInterface {
 
 
 struct CommitPeekInterface {
+    svBit ll_wen;
     svBit rf_wen;
     svBit wb_valid;
     svBitVecVal rf_waddr;

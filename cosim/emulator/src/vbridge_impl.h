@@ -133,7 +133,6 @@ private:
     bool isPokingFetch;
 
     bool waitforMutiCycleInsn;
-    bool mutiCycleInsnDone;
     uint32_t pendingInsn_pc;
     uint32_t pendingInsn_waddr;
     uint64_t pendingInsn_wdata;
