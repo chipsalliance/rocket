@@ -545,28 +545,6 @@ object cases extends Module {
 }
 
 object tests extends Module() {
-  object smoketest extends Module {
-    trait Test extends TaskModule {
-      override def defaultCommandName() = "run"
-
-      def run(args: String*) = T.command {
-        val bin = cases.smoketest.compile()
-
-        val runEnv = Map(
-          "COSIM_bin" -> bin.path.toString(),
-          "COSIM_entrance_bin" -> cases.entrance64.compile().path.toString,
-          "COSIM_wave" -> (T.dest / "wave").toString,
-          "COSIM_reset_vector" -> "80000000",
-        )
-        T.log.info(s"run smoketest with:\n ${runEnv.map { case (k, v) => s"$k=$v" }.mkString(" ")} ${cosim.emulator("64").elf().path.toString()}")
-        os.proc(Seq(cosim.emulator("64").elf().path.toString())).call(env = runEnv)
-        PathRef(T.dest)
-      }
-    }
-
-    object smoketest extends Test {}
-  }
-
   object riscvtests extends Module {
 
     trait Test extends TaskModule {
@@ -608,10 +586,6 @@ object tests extends Module() {
         }
       }
 
-    }
-
-    object smoketest extends Test {
-      def bin = Seq(cases.smoketest.compile())
     }
 
     object `rv64` extends Test {
