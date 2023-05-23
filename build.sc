@@ -373,20 +373,6 @@ object cases extends Module {
     }
   }
 
-  object smoketest extends Case {
-    override def linkScript: T[PathRef] = T {
-      os.write(T.ctx.dest / "linker.ld",
-        s"""
-           |SECTIONS
-           |{
-           |  . = 0x80000000;
-           |  .text.start : { *(.text.start) }
-           |}
-           |""".stripMargin)
-      PathRef(T.ctx.dest / "linker.ld")
-    }
-  }
-
   object entrance64 extends Case {
     override def xlen = 64
   }
@@ -408,6 +394,9 @@ object cases extends Module {
 
     object test extends Module {
       trait Suite extends c.Suite {
+        def testsRoot =
+          os.Path(sys.env("RISCV_TESTS_ROOT")) / "share" / "riscv-tests"
+
         def name = T {
           millSourcePath.last
         }
@@ -417,7 +406,7 @@ object cases extends Module {
         }
 
         def target = T.persistent {
-          os.walk(untar().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
+          os.walk(testsRoot).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
         }
 
         def init = T.persistent {
@@ -428,30 +417,9 @@ object cases extends Module {
           PathRef(T.dest)
         }
 
-        def test = T {
-          println("why")
-
-          target.map(a =>
-            println("hello"))
-          PathRef(T.dest)
-        }
-
         def binaries = T {
           os.walk(init().path).filter(p => p.last.startsWith(name())).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))
         }
-      }
-
-      def commit = T.input {
-        "047314c5b0525b86f7d5bb6ffe608f7a8b33ffdb"
-      }
-
-      def tgz = T.persistent {
-        Util.download(s"https://github.com/ZenithalHourlyRate/riscv-tests-release/releases/download/tag-${commit()}/riscv-tests.tgz")
-      }
-
-      def untar = T.persistent {
-        mill.modules.Jvm.runSubprocess(Seq("tar", "xzf", tgz().path).map(_.toString), Map[String, String](), T.dest)
-        PathRef(T.dest)
       }
 
       object `rv32mi-p` extends Suite

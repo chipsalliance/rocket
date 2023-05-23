@@ -35,8 +35,5 @@ riscv64tests:
 riscv32tests:
 	mill -i -j 0 tests.riscvtests.rv32
 
-smoketest:
-	mill -i -j 0 tests.smoketest.smoketest
-
 clean:
 	git clean -fd

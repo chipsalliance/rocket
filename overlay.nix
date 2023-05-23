@@ -3,6 +3,25 @@ final: prev:
 let
   myLLVM = final.llvmPackages_14;  # do not get into nixpkgs namespace
 
+  riscvTests = final.pkgsCross.riscv64-embedded.stdenv.mkDerivation rec {
+      pname = "riscv-tests";
+      version = "55bbcc8c06637a31cc01970881ba8072838a9121";
+      src = final.fetchgit {
+        url = "https://github.com/riscv-software-src/riscv-tests.git";
+        rev = "${version}";
+        fetchSubmodules = true;
+        sha256 = "sha256-TcIU+WFQxPqAG7lvfKPgHm4CnBpTkosqe+fYOxS+J7I=";
+      };
+
+      enableParallelBuilding = true;
+
+#      configureFlags = [
+#  	  # to match rocket-tools path
+#        "--prefix=${placeholder "out"}/riscv64-unknown-elf"
+#      ];
+      buildPhase = "make RISCV_PREFIX=riscv64-none-elf-";
+    };
+
   rv32-compilerrt = let
       pname = "rv-compilerrt";
       version = myLLVM.llvm.version;
@@ -204,7 +223,7 @@ let
     };
 in
 {
-  inherit myLLVM rv64-compilerrt rv64-musl rv64-clang my-cc-wrapper libspike rv32-compilerrt rv32-musl rv32-clang;
+  inherit myLLVM rv64-compilerrt rv64-musl rv64-clang my-cc-wrapper libspike rv32-compilerrt rv32-musl rv32-clang riscvTests;
 
   espresso = final.stdenv.mkDerivation rec {
     pname = "espresso";

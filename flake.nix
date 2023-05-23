@@ -27,11 +27,13 @@
           parallel protobuf ninja verilator antlr4 numactl dtc
           espresso
           circt
+          riscvTests
         ];
       in
         {
           devShell = pkgs.mkShell.override { stdenv = pkgs.myLLVM.stdenv; } {
             buildInputs = deps;
+            RISCV_TESTS_ROOT = "${pkgs.riscvTests}";
           };
         }
       )
