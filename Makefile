@@ -23,9 +23,6 @@ bsp:
 compile:
 	mill -i -j 0 __.compile
 
-elf:
-	mill -i -j 0 cosim.emulator.elf
-
 riscv64tests:
 	mill -i -j 0 tests.riscvtests.run[rv64]
 
