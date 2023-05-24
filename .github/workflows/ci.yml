@@ -1,0 +1,38 @@
+# This file describes the GitHub Actions workflow for continuous integration of rocket-chip.
+#
+# See
+# https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+# for API reference documentation on this file format.
+
+name: Mill Continuous Integration
+env:
+  USER: runner
+
+on:
+  push:
+    branches:
+      - split
+  pull_request:
+    branches:
+      - split
+
+jobs:
+  riscv-test:
+    name: riscv-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+
+      - uses: cachix/install-nix-action@v19
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.13.3/install
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Coursier Cache
+        uses: coursier/cache-action@v5
+
+      - name: run riscv-tests
+        run: |
+          nix --experimental-features 'nix-command flakes' develop -c make riscv64tests && nix --experimental-features 'nix-command flakes' develop -c make riscv32tests
