@@ -11,6 +11,7 @@ trait RocketModule extends ScalaModule {
   def tilelinkModule: Option[ScalaModule]
   override def moduleDeps = Seq() ++ chisel3Module ++ tilelinkModule
   override def scalacPluginClasspath = T(super.scalacPluginClasspath() ++ chisel3PluginJar())
+  override def scalacOptions = T(super.scalacOptions() ++ chisel3PluginJar().map(p => s"-Xplugin:${p.path}"))
 }
 
 // Test should depend on DiplomaticModule for now
@@ -20,4 +21,7 @@ trait DiplomaticModule extends ScalaModule {
   // upstream RocketChip in dev branch
   def rocketchipModule: ScalaModule
   override def moduleDeps = super.moduleDeps :+ rocketModule :+ rocketchipModule
+
+  override def scalacPluginClasspath = T(super.scalacPluginClasspath() ++ rocketModule.chisel3PluginJar())
+  override def scalacOptions = T(super.scalacOptions() ++ rocketModule.chisel3PluginJar().map(p => s"-Xplugin:${p.path}"))
 }

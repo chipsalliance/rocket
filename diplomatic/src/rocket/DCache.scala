@@ -7,7 +7,7 @@ import chisel3.util._
 import freechips.rocketchip.amba._
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tile.{CoreBundle, LookupByHartId}
+import org.chipsalliance.rockettile.{CoreBundle, LookupByHartId}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property

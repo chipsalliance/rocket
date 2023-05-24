@@ -9,7 +9,7 @@ import chisel3.util._
 import org.chipsalliance.cde.config.{Field, Parameters}
 import freechips.rocketchip.subsystem.CacheBlockBytes
 import freechips.rocketchip.diplomacy.RegionType
-import freechips.rocketchip.tile.{CoreModule, CoreBundle}
+import org.chipsalliance.rockettile.{CoreModule, CoreBundle}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
