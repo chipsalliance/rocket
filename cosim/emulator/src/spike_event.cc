@@ -106,7 +106,6 @@ void SpikeEvent::log_arch_changes() {
 
 SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl) : proc(proc), impl(impl) {
   auto &xr = proc.get_state()->XPR;
-// todo: mask
   pc = proc.get_state()->pc & emuConfig.get_mask(xlen);
   inst_bits = fetch.insn.bits();
   target_mem = -1;
@@ -145,7 +144,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
     uint64_t sp_bits = xr[2];
     switch (op) {
       case 0:
-        rd_idx = 8 + ((inst_bits & 0b11100) >> 2);// todo: rd_idx for store insn?
+        rd_idx = 8 + ((inst_bits & 0b11100) >> 2);
         if (func3 >= 5) {
           is_store = true;
           switch (func3) {
@@ -189,7 +188,7 @@ SpikeEvent::SpikeEvent(processor_t &proc, insn_fetch_t &fetch, VBridgeImpl *impl
       case 2:
         if (func3 >= 5) {
           is_store = true;
-          rd_idx = 0;// todo: set rd_idx to 0
+          rd_idx = 0;
           switch (func3) {
             case 5:// C.FSDSP
               target_mem = sp_bits + fetch.insn.rvc_sdsp_imm();

@@ -24,12 +24,12 @@ object v {
 }
 
 object myfirrtl extends dependencies.firrtl.build.firrtlCrossModule(v.scala) {
-  override def millSourcePath = os.pwd / "dependencies" / "firrtl"
-
   override val checkSystemAntlr4Version = false
   override val checkSystemProtocVersion = false
   override val protocVersion = os.proc("protoc", "--version").call().out.text.dropRight(1).split(' ').last
   override val antlr4Version = os.proc("antlr4").call().out.text.split('\n').head.split(' ').last
+
+  override def millSourcePath = os.pwd / "dependencies" / "firrtl"
 }
 
 object mytreadle extends dependencies.treadle.build.treadleCrossModule(v.scala) {
@@ -123,14 +123,11 @@ object diplomatic extends common.DiplomaticModule {
 }
 
 object cosim extends Module {
-  // all xlen from here
-  object elaborate extends Cross[elaborate]("32", "64")
-
   class elaborate(xLen: String) extends ScalaModule with ScalafmtModule {
 
-    def millSourcePath = super.millSourcePath / os.up
-
     def sources = T.sources(millSourcePath)
+
+    def millSourcePath = super.millSourcePath / os.up
 
     override def scalacPluginClasspath = T {
       Agg(mychisel3.plugin.jar())
@@ -152,6 +149,14 @@ object cosim extends Module {
       )
     }
 
+    def crossprint = T {
+      println("xlen" + xLen)
+    }
+
+    def chiselAnno = T {
+      os.walk(elaborate().path).collectFirst { case p if p.last.endsWith("anno.json") => p }.map(PathRef(_)).get
+    }
+
     def elaborate = T {
       // class path for `moduleDeps` is only a directory, not a jar, which breaks the cache.
       // so we need to manually add the class files of `moduleDeps` here.
@@ -167,48 +172,21 @@ object cosim extends Module {
       PathRef(T.dest)
     }
 
-    def crossprint = T {
-      println("xlen" + xLen)
-    }
-
-    def chiselAnno = T {
-      os.walk(elaborate().path).collectFirst { case p if p.last.endsWith("anno.json") => p }.map(PathRef(_)).get
+    def topName = T {
+      chirrtl().path.last.split('.').head
     }
 
     def chirrtl = T {
       os.walk(elaborate().path).collectFirst { case p if p.last.endsWith("fir") => p }.map(PathRef(_)).get
     }
 
-    def topName = T {
-      chirrtl().path.last.split('.').head
-    }
-
   }
-
-  object mfccompile extends Cross[mfccompile]("32", "64")
 
   class mfccompile(xLen: String) extends Module {
 
-    def millSourcePath = super.millSourcePath / os.up
-
     def sources = T.sources(millSourcePath)
 
-    def compile = T {
-      os.proc("firtool",
-        elaborate(xLen).chirrtl().path,
-        s"--annotation-file=${elaborate(xLen).chiselAnno().path}",
-        "--disable-annotation-unknown",
-        "-disable-infer-rw",
-        "-dedup",
-        "-O=debug",
-        "--split-verilog",
-        "--preserve-values=named",
-        "--output-annotation-file=mfc.anno.json",
-        "--lowering-options=verifLabels",
-        s"-o=${T.dest}"
-      ).call(T.dest)
-      PathRef(T.dest)
-    }
+    def millSourcePath = super.millSourcePath / os.up
 
     def rtls = T.persistent {
       os.read(compile().path / "filelist.f").split("\n").map(str =>
@@ -228,33 +206,54 @@ object cosim extends Module {
     def annotations = T {
       os.walk(compile().path).filter(p => p.last.endsWith("mfc.anno.json")).map(PathRef(_))
     }
-  }
 
-  object emulator extends Cross[emulator]("32", "64")
+    def compile = T {
+      os.proc("firtool",
+        elaborate(xLen).chirrtl().path,
+        s"--annotation-file=${elaborate(xLen).chiselAnno().path}",
+        "--disable-annotation-unknown",
+        "-disable-infer-rw",
+        "-dedup",
+        "-O=debug",
+        "--split-verilog",
+        "--preserve-values=named",
+        "--output-annotation-file=mfc.anno.json",
+        "--lowering-options=verifLabels",
+        s"-o=${T.dest}"
+      ).call(T.dest)
+      PathRef(T.dest)
+    }
+  }
 
   class emulator(xLen: String) extends Module {
 
-    def millSourcePath = super.millSourcePath / os.up
+    val topName = "TestBench"
 
     def sources = T.sources(millSourcePath)
 
-    def csources = T.source {
-      millSourcePath / "src"
-    }
+    def millSourcePath = super.millSourcePath / os.up
 
-    def csrcDir = T {
-      PathRef(millSourcePath / "src")
+    def elf = T.persistent {
+      val path = T.dest / "CMakeLists.txt"
+      os.write.over(path, CMakeListsString())
+      T.log.info(s"CMake project generated in $path,\nverilating...")
+      os.proc(
+        // format: off
+        "cmake",
+        "-G", "Ninja",
+        T.dest.toString
+        // format: on
+      ).call(T.dest)
+      T.log.info("compile rtl to emulator...")
+      os.proc(
+        // format: off
+        "ninja"
+        // format: on
+      ).call(T.dest)
+      val elf = T.dest / topName
+      T.log.info(s"verilated exe generated: ${elf.toString}")
+      PathRef(elf)
     }
-
-    def vsrcs = T.persistent {
-      mfccompile(xLen).rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
-    }
-
-    def allCSourceFiles = T {
-      Lib.findSourceFiles(Seq(csrcDir()), Seq("S", "s", "c", "cpp", "cc")).map(PathRef(_))
-    }
-
-    val topName = "TestBench"
 
     def CMakeListsString = T {
       // format: off
@@ -299,6 +298,22 @@ object cosim extends Module {
       // format: on
     }
 
+    def csources = T.source {
+      millSourcePath / "src"
+    }
+
+    def vsrcs = T.persistent {
+      mfccompile(xLen).rtls().filter(p => p.path.ext == "v" || p.path.ext == "sv")
+    }
+
+    def allCSourceFiles = T {
+      Lib.findSourceFiles(Seq(csrcDir()), Seq("S", "s", "c", "cpp", "cc")).map(PathRef(_))
+    }
+
+    def csrcDir = T {
+      PathRef(millSourcePath / "src")
+    }
+
     def verilatorArgs = T.input {
       Seq(
         // format: off
@@ -313,41 +328,32 @@ object cosim extends Module {
         // format: on
       )
     }
-
-    def elf = T.persistent {
-      val path = T.dest / "CMakeLists.txt"
-      os.write.over(path, CMakeListsString())
-      T.log.info(s"CMake project generated in $path,\nverilating...")
-      os.proc(
-        // format: off
-        "cmake",
-        "-G", "Ninja",
-        T.dest.toString
-        // format: on
-      ).call(T.dest)
-      T.log.info("compile rtl to emulator...")
-      os.proc(
-        // format: off
-        "ninja"
-        // format: on
-      ).call(T.dest)
-      val elf = T.dest / topName
-      T.log.info(s"verilated exe generated: ${elf.toString}")
-      PathRef(elf)
-    }
   }
+
+  object elaborate extends Cross[elaborate]("32", "64")
+
+  object mfccompile extends Cross[mfccompile]("32", "64")
+
+  object emulator extends Cross[emulator]("32", "64")
 }
 
 object cases extends Module {
   trait Case extends Module {
-    def name: T[String] = millSourcePath.last
-
-    def sources = T.sources {
-      millSourcePath
+    def compile: T[PathRef] = T {
+      os.proc(Seq(s"clang-rv${xlen}", "-o", name() + ".elf", s"--target=riscv${xlen}", s"-march=rv${xlen}gc", "-mno-relax", s"-T${linkScript().path}") ++ allSourceFiles().map(_.path.toString)).call(T.ctx.dest)
+      os.proc(Seq("llvm-objcopy", "-O", "binary", "--only-section=.text", name() + ".elf", name())).call(T.ctx.dest)
+      T.log.info(s"${name()} is generated in ${T.dest},\n")
+      PathRef(T.ctx.dest / name())
     }
+
+    def name: T[String] = millSourcePath.last
 
     def allSourceFiles = T {
       Lib.findSourceFiles(sources(), Seq("S", "s", "c", "cpp")).map(PathRef(_))
+    }
+
+    def sources = T.sources {
+      millSourcePath
     }
 
     def xlen: Int = 64
@@ -363,13 +369,6 @@ object cases extends Module {
            |""".stripMargin)
       PathRef(T.ctx.dest / "linker.ld")
     }
-
-    def compile: T[PathRef] = T {
-      os.proc(Seq(s"clang-rv${xlen}", "-o", name() + ".elf", s"--target=riscv${xlen}", s"-march=rv${xlen}gc", "-mno-relax", s"-T${linkScript().path}") ++ allSourceFiles().map(_.path.toString)).call(T.ctx.dest)
-      os.proc(Seq("llvm-objcopy", "-O", "binary", "--only-section=.text", name() + ".elf", name())).call(T.ctx.dest)
-      T.log.info(s"${name()} is generated in ${T.dest},\n")
-      PathRef(T.ctx.dest / name())
-    }
   }
 
   object entrance64 extends Case {
@@ -382,14 +381,10 @@ object cases extends Module {
 
   object riscvtests extends Module {
 
+    def alltests = os.walk(testsRoot).filterNot(p => p.last.endsWith("dump")).filter(p => p.last.startsWith("rv")).map(c => c.last)
+
     def testsRoot =
       os.Path(sys.env("RISCV_TESTS_ROOT")) / "share" / "riscv-tests"
-
-    def alltests = os.walk(testsRoot).filterNot(p => p.last.endsWith("dump")).filter(p => p.last.startsWith("rv")).map(c=>c.last)
-    
-    def target = T {
-      os.walk(testsRoot).filter(p => p.last.startsWith("rv")).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
-    }
 
     def init = T {
       target().map(bin => {
@@ -399,11 +394,16 @@ object cases extends Module {
       PathRef(T.dest)
     }
 
-    class Suite(casename:String) extends ScalaModule with ScalafmtModule {
+    def target = T {
+      os.walk(testsRoot).filter(p => p.last.startsWith("rv")).filterNot(p => p.last.endsWith("dump")).map(PathRef(_))
+    }
+
+    class Suite(casename: String) extends ScalaModule with ScalafmtModule {
       override def scalaVersion = v.scala
-      def binaries = T{
+
+      def binaries = T {
         casename match {
-          case "rv64"=>{
+          case "rv64" => {
             os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).filter(p =>
               p.last.startsWith("rv64mi-p") | p.last.startsWith("rv64si-p") | p.last.startsWith("rv64ui-p") | p.last.startsWith("rv64uf-p") | p.last.startsWith("rv64ua-p") | p.last.startsWith("rv64ud-p") | p.last.startsWith("rv64uc-p") | p.last.startsWith("rv64um-p") | p.last.startsWith("rv64uzfh-p")).filterNot(p =>
               p.last.startsWith("rv64ui-p-simple") //have no <pass> symbol in elf
@@ -413,8 +413,9 @@ object cases extends Module {
                 | p.last.endsWith("rv64ui-p-ma_data") // https://github.com/riscv-software-src/riscv-tests/issues/419
                 | p.last.endsWith("rv64si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001ac
                 | p.last.endsWith("rv64mi-p-scall")) // infinit loop after trap_supervisor_ecall at 0x800001ec
-              .map(PathRef(_))}
-          case "rv32"=>{
+              .map(PathRef(_))
+          }
+          case "rv32" => {
             os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).filter(p =>
               p.last.startsWith("rv32mi-p") | p.last.startsWith("rv32si-p") | p.last.startsWith("rv32ui-p") | p.last.startsWith("rv32uf-p") | p.last.startsWith("rv32ua-p") | p.last.startsWith("rv32um-p") | p.last.startsWith("rv32uzfh-p")).filterNot(p =>
               p.last.startsWith("rv32ui-p-simple")
@@ -423,13 +424,16 @@ object cases extends Module {
                 | p.last.endsWith("rv32mi-p-scall") // infinit loop after trap_user_ecall at 0x800001c8
                 | p.last.endsWith("rv32si-p-wfi") // infinit loop after trap_supervisor_ecall at 0x800001a8
                 | p.last.endsWith("rv32si-p-dirty")) // infinit loop after trap_machine_ecall at 0x80000027c
-              .map(PathRef(_))}
-          case _ =>{os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))}
+              .map(PathRef(_))
+          }
+          case _ => {
+            os.walk(init().path).filter(p => p.last.startsWith(casename)).filterNot(p => p.last.endsWith("elf")).map(PathRef(_))
+          }
         }
       }
     }
 
-    object rvcase extends Cross[Suite](alltests:+"rv64":+"rv32": _*)
+    object rvcase extends Cross[Suite](alltests :+ "rv64" :+ "rv32": _*)
 
   }
 }
@@ -438,8 +442,7 @@ object tests extends Module() {
   object riscvtests extends Module {
     class run(casename: String) extends ScalaModule with ScalafmtModule {
       override def scalaVersion = v.scala
-      def bin = cases.riscvtests.rvcase(casename).binaries
-      def xlen = if(casename.startsWith("rv64")) "64" else "32"
+
       override def defaultCommandName() = "test"
 
       def test(args: String*) = T.command {
@@ -473,9 +476,13 @@ object tests extends Module() {
         }
       }
 
+      def bin = cases.riscvtests.rvcase(casename).binaries
+
+      def xlen = if (casename.startsWith("rv64")) "64" else "32"
+
     }
 
-    object run extends Cross[run](cases.riscvtests.alltests:+"rv64":+"rv32": _*)
+    object run extends Cross[run](cases.riscvtests.alltests :+ "rv64" :+ "rv32": _*)
 
   }
 }

@@ -15,7 +15,6 @@
 
 class VBridgeImpl;
 
-//todo: config 16
 struct Cacheblock {
     uint64_t addr;
     uint64_t blocks[16];

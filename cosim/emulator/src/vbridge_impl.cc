@@ -19,7 +19,6 @@ inline uint32_t decode_size(uint32_t encoded_size) {
   return 1 << encoded_size;
 }
 
-//todo: use xlen to configure pro
 VBridgeImpl::VBridgeImpl() : sim(1 << 30), isa(emuConfig.get_isa(xlen).c_str(), "msu"), _cycles(100), proc(
     /*isa*/ &isa,
     /*varch*/ fmt::format("").c_str(),
@@ -115,7 +114,6 @@ uint64_t VBridgeImpl::get_t() {
   return getCycle();
 }
 
-//todo: mask
 uint8_t VBridgeImpl::load(uint64_t address) {
   return *sim.addr_to_mem(address & emuConfig.get_mask(xlen));
 }
@@ -148,7 +146,6 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &
     beforeReturnAquire = 1;
     LOG(INFO) << fmt::format("Find C channel for mem = {:08X}", tl_c.c_bits_address);
 
-    // todo:
     switch (tl_c.c_bits_opcode) {
       case TlOpcode::Release: {
         LOG(FATAL) << fmt::format("Find c release");
@@ -171,7 +168,7 @@ void VBridgeImpl::dpiPeekTL(svBit miss, svBitVecVal pc, const TlAPeekInterface &
   uint8_t opcode = tl_peek.a_bits_opcode;
   uint32_t addr = tl_peek.a_bits_address;
   uint8_t size = tl_peek.a_bits_size;
-  uint8_t src = tl_peek.a_bits_source;//  TODO: be returned in D channel
+  uint8_t src = tl_peek.a_bits_source;
   uint8_t param = tl_peek.a_bits_param;
   // find icache refill request, fill fetch_banks
   if (miss) {
@@ -304,7 +301,6 @@ void VBridgeImpl::dpiPokeTL(const TlPokeInterface &tl_poke) {
       break;
     }
   }
-  // todo: source for acquire?
   for (auto &aquire_bank: aquire_banks) {
     if (beforeReturnAquire) {
       beforeReturnAquire = 0;
@@ -434,7 +430,6 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // for non-store ins. check rf write
   // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
   if ((!se->is_store) && (!se->is_mutiCycle)) {
-//todo:mask
     CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen))
       << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
   } else if (se->is_mutiCycle) {
