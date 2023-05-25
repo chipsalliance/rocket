@@ -229,6 +229,8 @@ object cosim extends Module {
 
     val ncores: Int = Runtime.getRuntime.availableProcessors()
 
+    val emulatorCores: Int = if(ncores > 8) 8 else ncores
+
     val topName = "TestBench"
 
     def sources = T.sources(millSourcePath)
@@ -293,7 +295,7 @@ object cosim extends Module {
          |  TOP_MODULE TestBench
          |  PREFIX VTestBench
          |  OPT_FAST
-         |  THREADS ${ncores}
+         |  THREADS ${emulatorCores}
          |  VERILATOR_ARGS ${verilatorArgs().mkString(" ")}
          |)
          |""".stripMargin

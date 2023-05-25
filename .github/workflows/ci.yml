@@ -33,6 +33,10 @@ jobs:
       - name: Coursier Cache
         uses: coursier/cache-action@v5
 
-      - name: run riscv-tests
+      - name: run riscv-32tests
         run: |
-          nix --experimental-features 'nix-command flakes' develop -c make riscv64tests && nix --experimental-features 'nix-command flakes' develop -c make riscv32tests
+          nix --experimental-features 'nix-command flakes' develop -c make riscv32tests
+
+      - name: run riscv-64tests
+        run: |
+          nix --experimental-features 'nix-command flakes' develop -c make riscv64tests
