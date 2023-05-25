@@ -20,6 +20,9 @@ jobs:
   riscv-test:
     name: riscv-tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config: [rv32, rv64]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -33,10 +36,6 @@ jobs:
       - name: Coursier Cache
         uses: coursier/cache-action@v5
 
-      - name: run riscv-32tests
+      - name: run riscv-tests
         run: |
-          nix --experimental-features 'nix-command flakes' develop -c make riscv32tests
-
-      - name: run riscv-64tests
-        run: |
-          nix --experimental-features 'nix-command flakes' develop -c make riscv64tests
+          nix --experimental-features 'nix-command flakes' develop -c mill -i -j 0 tests.riscvtests.run[${{ matrix.config }}]
