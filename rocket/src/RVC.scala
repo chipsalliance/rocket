@@ -152,7 +152,7 @@ class RVCDecoder(x: UInt, xLen: Int, useAddiForMv: Boolean = false) {
   }
 }
 
-class RVCExpander(useAddiForMv: Boolean = false, usingCompressed:Boolean, XLen:Int)extends Module {
+class RVCExpander(useAddiForMv: Boolean = false, usingCompressed: Boolean, XLen: Int)extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(32.W))
     val out = Output(new ExpandedInstruction)
