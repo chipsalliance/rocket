@@ -227,6 +227,10 @@ object cosim extends Module {
 
   class emulator(xLen: String) extends Module {
 
+    val ncores: Int = Runtime.getRuntime.availableProcessors()
+
+    val emulatorCores: Int = if(ncores > 8) 8 else ncores
+
     val topName = "TestBench"
 
     def sources = T.sources(millSourcePath)
@@ -291,7 +295,7 @@ object cosim extends Module {
          |  TOP_MODULE TestBench
          |  PREFIX VTestBench
          |  OPT_FAST
-         |  THREADS 8
+         |  THREADS ${emulatorCores}
          |  VERILATOR_ARGS ${verilatorArgs().mkString(" ")}
          |)
          |""".stripMargin
@@ -468,6 +472,7 @@ object tests extends Module() {
           PathRef(if (p.exitCode != 0) {
             os.move(T.dest / s"$name.running.log", T.dest / s"$name.failed.log")
             System.err.println(s"Test $name failed with exit code ${p.exitCode}")
+            System.exit(1)
             T.dest / s"$name.failed.log"
           } else {
             os.move(T.dest / s"$name.running.log", T.dest / s"$name.passed.log")
