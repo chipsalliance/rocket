@@ -1,12 +1,9 @@
 // See LICENSE.SiFive for license details.
-
 package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import org.chipsalliance.cde.config.Parameters
-import org.chipsalliance.rockettile._
-import freechips.rocketchip.util._
+import org.chipsalliance.rocket.util._
 
 class ExpandedInstruction extends Bundle {
   val bits = UInt(32.W)
@@ -108,7 +105,7 @@ class RVCDecoder(x: UInt, xLen: Int, useAddiForMv: Boolean = false) {
     }
     Seq(addi, jal, li, lui, arith, j, beqz, bnez)
   }
-  
+
   def q2 = {
     val load_opc = Mux(rd.orR, 0x03.U(7.W), 0x1F.U(7.W))
     def slli = inst(Cat(shamt, rd, 1.U(3.W), rd, 0x13.U(7.W)), rd, rd, rs2)
@@ -155,7 +152,7 @@ class RVCDecoder(x: UInt, xLen: Int, useAddiForMv: Boolean = false) {
   }
 }
 
-class RVCExpander(useAddiForMv: Boolean = false)(implicit val p: Parameters) extends Module with HasCoreParameters {
+class RVCExpander(useAddiForMv: Boolean = false, usingCompressed:Boolean, XLen:Int)extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(32.W))
     val out = Output(new ExpandedInstruction)
@@ -164,9 +161,9 @@ class RVCExpander(useAddiForMv: Boolean = false)(implicit val p: Parameters) ext
 
   if (usingCompressed) {
     io.rvc := io.in(1,0) =/= 3.U
-    io.out := new RVCDecoder(io.in, p(XLen), useAddiForMv).decode
+    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).decode
   } else {
     io.rvc := false.B
-    io.out := new RVCDecoder(io.in, p(XLen), useAddiForMv).passthrough
+    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).passthrough
   }
 }
