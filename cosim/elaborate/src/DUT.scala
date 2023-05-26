@@ -69,7 +69,7 @@ class DUT(xLen:Int)(p: Parameters) extends Module {
     val resetVector = InModuleBody {
       resetVectorNode.makeIO()
     }
-    val hartidNode = BundleBridgeSource(() => UInt(4.W))
+    val hartidNode = BundleBridgeSource(() => UInt(1.W))
     rocketTile.hartIdNode := hartidNode
     InModuleBody {
       hartidNode.bundle := 0.U
