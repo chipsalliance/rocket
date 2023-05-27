@@ -4,11 +4,32 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Decoupled,log2Ceil,Cat,UIntToOH,Fill}
-import org.chipsalliance.cde.config.Parameters
-import org.chipsalliance.rockettile._
-import freechips.rocketchip.util._
+import org.chipsalliance.rocket.util._
+import org.chipsalliance.rocket.util.property._
 
-class Instruction(implicit val p: Parameters) extends ParameterizedBundle with HasCoreParameters {
+//todo: move to Fronted
+class FrontendExceptions extends Bundle {
+  val pf = new Bundle {
+    val inst = Bool()
+  }
+  val gf = new Bundle {
+    val inst = Bool()
+  }
+  val ae = new Bundle {
+    val inst = Bool()
+  }
+}
+
+class FrontendResp(BTBParams: BTBParams,vaddrBits:Int,vaddrBitsExtended:Int,fetchWidth:Int,coreInstBits:Int) extends Bundle {
+  val btb = new BTBResp(BTBParams,fetchWidth,vaddrBits)
+  val pc = UInt(vaddrBitsExtended.W)  // ID stage PC
+  val data = UInt((fetchWidth * coreInstBits).W)
+  val mask = Bits(fetchWidth.W)
+  val xcpt = new FrontendExceptions
+  val replay = Bool()
+}
+
+class Instruction(coreInstBits:Int, usingCompressed:Boolean) extends Bundle {
   val xcpt0 = new FrontendExceptions // exceptions on first half of instruction
   val xcpt1 = new FrontendExceptions // exceptions on second half of instruction
   val replay = Bool()
@@ -18,13 +39,14 @@ class Instruction(implicit val p: Parameters) extends ParameterizedBundle with H
   require(coreInstBits == (if (usingCompressed) 16 else 32))
 }
 
-class IBuf(implicit p: Parameters) extends CoreModule {
+class IBuf(coreInstBits: Int, usingCompressed: Boolean, vaddrBits: Int, vaddrBitsExtended: Int, retireWidth: Int, decodeWidth: Int,
+           fetchWidth: Int, coreInstBytes: Int, BTBParams: BTBParams, xlen: Int) extends Module {
   val io = IO(new Bundle {
-    val imem = Flipped(Decoupled(new FrontendResp))
+    val imem = Flipped(Decoupled(new FrontendResp(BTBParams, vaddrBits, vaddrBitsExtended, fetchWidth, coreInstBits)))
     val kill = Input(Bool())
     val pc = Output(UInt(vaddrBitsExtended.W))
-    val btb_resp = Output(new BTBResp())
-    val inst = Vec(retireWidth, Decoupled(new Instruction))
+    val btb_resp = Output(new BTBResp(BTBParams, fetchWidth, vaddrBits))
+    val inst = Vec(retireWidth, Decoupled(new Instruction(coreInstBits, usingCompressed)))
   })
 
   // This module is meant to be more general, but it's not there yet
@@ -33,7 +55,7 @@ class IBuf(implicit p: Parameters) extends CoreModule {
   val n = fetchWidth - 1
   val nBufValid = if (n == 0) 0.U else RegInit(init=0.U(log2Ceil(fetchWidth).W))
   val buf = Reg(chiselTypeOf(io.imem.bits))
-  val ibufBTBResp = Reg(new BTBResp)
+  val ibufBTBResp = Reg(new BTBResp(BTBParams, fetchWidth, vaddrBits))
   val pcWordMask = (coreInstBytes*fetchWidth-1).U(vaddrBitsExtended.W)
 
   val pcWordBits = io.imem.bits.pc.extract(log2Ceil(fetchWidth*coreInstBytes)-1, log2Ceil(coreInstBytes))
@@ -83,7 +105,7 @@ class IBuf(implicit p: Parameters) extends CoreModule {
   expand(0, 0.U, inst)
 
   def expand(i: Int, j: UInt, curInst: UInt): Unit = if (i < retireWidth) {
-    val exp = Module(new RVCExpander)
+    val exp = Module(new RVCExpander(usingCompressed = usingCompressed, XLen = xlen))
     exp.io.in := curInst
     io.inst(i).bits.inst := exp.io.out
     io.inst(i).bits.raw := curInst

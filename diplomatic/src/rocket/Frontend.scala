@@ -30,14 +30,7 @@ class FrontendExceptions extends Bundle {
   }
 }
 
-class FrontendResp(implicit p: Parameters) extends CoreBundle()(p) {
-  val btb = new BTBResp
-  val pc = UInt(vaddrBitsExtended.W)  // ID stage PC
-  val data = UInt((fetchWidth * coreInstBits).W)
-  val mask = Bits(fetchWidth.W)
-  val xcpt = new FrontendExceptions
-  val replay = Bool()
-}
+
 
 class FrontendPerfEvents extends Bundle {
   val acquire = Bool()
@@ -49,11 +42,11 @@ class FrontendIO(implicit p: Parameters) extends CoreBundle()(p) {
   val clock_enabled = Input(Bool())
   val req = Valid(new FrontendReq)
   val sfence = Valid(new SFenceReq)
-  val resp = Flipped(Decoupled(new FrontendResp))
+  val resp = Flipped(Decoupled(new FrontendResp(tileParams.btb.get, vaddrBits, vaddrBitsExtended, fetchWidth, coreInstBits)))
   val gpa = Flipped(Valid(UInt(vaddrBitsExtended.W)))
-  val btb_update = Valid(new BTBUpdate)
-  val bht_update = Valid(new BHTUpdate)
-  val ras_update = Valid(new RASUpdate)
+  val btb_update = Valid(new BTBUpdate(tileParams.btb.get, fetchWidth, vaddrBits))
+  val bht_update = Valid(new BHTUpdate(tileParams.btb.get, vaddrBits))
+  val ras_update = Valid(new RASUpdate(vaddrBits))
   val flush_icache = Output(Bool())
   val npc = Input(UInt(vaddrBitsExtended.W))
   val perf = Input(new FrontendPerfEvents())
@@ -83,7 +76,7 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   val icache = outer.icache.module
   require(fetchWidth*coreInstBytes == outer.icacheParams.fetchBytes)
 
-  val fq = withReset(reset.asBool || io.cpu.req.valid) { Module(new ShiftQueue(new FrontendResp, 5, flow = true)) }
+  val fq = withReset(reset.asBool || io.cpu.req.valid) { Module(new ShiftQueue(new FrontendResp(tileParams.btb.get, vaddrBits, vaddrBitsExtended, fetchWidth, coreInstBits), 5, flow = true))}
 
   val clock_en_reg = Reg(Bool())
   val clock_en = clock_en_reg || io.cpu.might_request
@@ -111,7 +104,7 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   val s1_speculative = Reg(Bool())
   val s2_pc = RegInit(t = UInt(vaddrBitsExtended.W), alignPC(io_reset_vector))
   val s2_btb_resp_valid = if (usingBTB) Reg(Bool()) else false.B
-  val s2_btb_resp_bits = Reg(new BTBResp)
+  val s2_btb_resp_bits = Reg(new BTBResp(tileParams.btb.get, fetchWidth, vaddrBits))
   val s2_btb_taken = s2_btb_resp_valid && s2_btb_resp_bits.taken
   val s2_tlb_resp = Reg(tlb.io.resp.cloneType)
   val s2_xcpt = s2_tlb_resp.ae.inst || s2_tlb_resp.pf.inst || s2_tlb_resp.gf.inst
@@ -190,7 +183,7 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   when (icache.io.resp.valid && icache.io.resp.bits.ae) { fq.io.enq.bits.xcpt.ae.inst := true.B }
 
   if (usingBTB) {
-    val btb = Module(new BTB)
+    val btb = Module(new BTB(tileParams.btb.get, fetchBytes, fetchWidth, vaddrBits, matchBits, coreInstBits))
     btb.io.flush := false.B
     btb.io.req.valid := false.B
     btb.io.req.bits.addr := s1_pc
