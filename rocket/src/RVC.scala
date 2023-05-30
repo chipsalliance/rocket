@@ -152,7 +152,7 @@ class RVCDecoder(x: UInt, xLen: Int, useAddiForMv: Boolean = false) {
   }
 }
 
-class RVCExpander(useAddiForMv: Boolean = false, usingCompressed: Boolean, XLen: Int)extends Module {
+class RVCExpander(useAddiForMv: Boolean = false, usingCompressed: Boolean, xLen: Int)extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(32.W))
     val out = Output(new ExpandedInstruction)
@@ -161,9 +161,9 @@ class RVCExpander(useAddiForMv: Boolean = false, usingCompressed: Boolean, XLen:
 
   if (usingCompressed) {
     io.rvc := io.in(1,0) =/= 3.U
-    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).decode
+    io.out := new RVCDecoder(io.in, xLen, useAddiForMv).decode
   } else {
     io.rvc := false.B
-    io.out := new RVCDecoder(io.in, XLen, useAddiForMv).passthrough
+    io.out := new RVCDecoder(io.in, xLen, useAddiForMv).passthrough
   }
 }

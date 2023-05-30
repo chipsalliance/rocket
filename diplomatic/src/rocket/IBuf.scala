@@ -83,7 +83,7 @@ class IBuf(implicit p: Parameters) extends CoreModule {
   expand(0, 0.U, inst)
 
   def expand(i: Int, j: UInt, curInst: UInt): Unit = if (i < retireWidth) {
-    val exp = Module(new RVCExpander(usingCompressed = usingCompressed, XLen = xLen))
+    val exp = Module(new RVCExpander(usingCompressed = usingCompressed, xLen = xLen))
     exp.io.in := curInst
     io.inst(i).bits.inst := exp.io.out
     io.inst(i).bits.raw := curInst
