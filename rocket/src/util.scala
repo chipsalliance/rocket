@@ -147,6 +147,10 @@ package object util {
     def >==(y: UInt): Bool = x >= y || y === 0.U
   }
 
+  def UIntToOH1(x: UInt, width: Int): UInt = ~((-1).S(width.W).asUInt << x) (width - 1, 0)
+
+  def UIntToOH1(x: UInt): UInt = UIntToOH1(x, (1 << x.getWidth) - 1)
+
   implicit class IntToAugmentedInt(private val x: Int) extends AnyVal {
     // exact log2
     def log2: Int = {

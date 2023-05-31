@@ -141,15 +141,6 @@ class PTBR(implicit p: Parameters) extends CoreBundle()(p) {
   val ppn = UInt((maxPAddrBits - pgIdxBits).W)
 }
 
-object PRV
-{
-  val SZ = 2
-  val U = 0
-  val S = 1
-  val H = 2
-  val M = 3
-}
-
 object CSR
 {
   // commands
@@ -279,7 +270,7 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   val interrupt = Output(Bool())
   val interrupt_cause = Output(UInt(xLen.W))
   val bp = Output(Vec(nBreakpoints, new BP))
-  val pmp = Output(Vec(nPMPs, new PMP))
+  val pmp = Output(Vec(nPMPs, new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
   val counters = Vec(nPerfCounters, new PerfCounterIO)
   val csrw_counter = Output(UInt(CSR.nCtr.W))
   val inhibit_cycle = Output(Bool())
@@ -459,7 +450,7 @@ class CSRFile(
 
   val reg_tselect = Reg(UInt(log2Up(nBreakpoints).W))
   val reg_bp = Reg(Vec(1 << log2Up(nBreakpoints), new BP))
-  val reg_pmp = Reg(Vec(nPMPs, new PMPReg))
+  val reg_pmp = Reg(Vec(nPMPs, new PMPReg(paddrBits, pmpGranularity)))
 
   val reg_mie = Reg(UInt(xLen.W))
   val (reg_mideleg, read_mideleg) = {
@@ -587,7 +578,7 @@ class CSRFile(
   io.bp := reg_bp take nBreakpoints
   io.mcontext := reg_mcontext.getOrElse(0.U)
   io.scontext := reg_scontext.getOrElse(0.U)
-  io.pmp := reg_pmp.map(PMP(_))
+  io.pmp := reg_pmp.map(PMP(_, paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits))
 
   val isaMaskString =
     (if (usingMulDiv) "M" else "") +
@@ -737,7 +728,7 @@ class CSRFile(
   def pmpCfgIndex(i: Int) = (xLen / 32) * (i / pmpCfgPerCSR)
   if (reg_pmp.nonEmpty) {
     require(reg_pmp.size <= CSR.maxPMPs)
-    val read_pmp = reg_pmp.padTo(CSR.maxPMPs, 0.U.asTypeOf(new PMP))
+    val read_pmp = reg_pmp.padTo(CSR.maxPMPs, 0.U.asTypeOf(new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
     for (i <- 0 until read_pmp.size by pmpCfgPerCSR)
       read_mapping += (CSRs.pmpcfg0 + pmpCfgIndex(i)) -> read_pmp.map(_.cfg).slice(i, i + pmpCfgPerCSR).asUInt
     for ((pmp, i) <- read_pmp.zipWithIndex)
