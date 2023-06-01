@@ -1,0 +1,4 @@
+out/
+.*.sw[a-p]
+.bsp
+.idea

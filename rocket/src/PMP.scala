@@ -4,9 +4,7 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{Cat, log2Ceil}
-import org.chipsalliance.cde.config._
-import org.chipsalliance.rockettile._
-import freechips.rocketchip.util._
+import org.chipsalliance.rocket.util._
 
 class PMPConfig extends Bundle {
   val l = Bool()
@@ -20,8 +18,8 @@ class PMPConfig extends Bundle {
 object PMP {
   def lgAlign = 2
 
-  def apply(reg: PMPReg): PMP = {
-    val pmp = Wire(new PMP()(reg.p))
+  def apply(reg: PMPReg, paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int): PMP = {
+    val pmp = Wire(new PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int))
     pmp.cfg := reg.cfg
     pmp.addr := reg.addr
     pmp.mask := pmp.computeMask
@@ -29,7 +27,7 @@ object PMP {
   }
 }
 
-class PMPReg(implicit p: Parameters) extends CoreBundle()(p) {
+class PMPReg(paddrBits: Int, pmpGranularity: Int) extends Bundle {
   val cfg = new PMPConfig
   val addr = UInt((paddrBits - PMP.lgAlign).W)
 
@@ -49,7 +47,7 @@ class PMPReg(implicit p: Parameters) extends CoreBundle()(p) {
   def addrLocked(next: PMPReg) = cfgLocked || next.cfgLocked && next.tor
 }
 
-class PMP(implicit p: Parameters) extends PMPReg {
+class PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) extends PMPReg(paddrBits, pmpGranularity) {
   val mask = UInt(paddrBits.W)
 
   import PMP._
@@ -132,19 +130,18 @@ class PMP(implicit p: Parameters) extends PMPReg {
     Mux(napot, pow2Match(x, lgSize, lgMaxSize), torNotNAPOT && rangeMatch(x, lgSize, lgMaxSize, prev))
 }
 
-class PMPHomogeneityChecker(pmps: Seq[PMP])(implicit p: Parameters) {
+class PMPHomogeneityChecker(pmps: Seq[PMP], paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) {
   def apply(addr: UInt, pgLevel: UInt): Bool = {
-    pmps.foldLeft((true.B, 0.U.asTypeOf(new PMP))) { case ((h, prev), pmp) =>
+    pmps.foldLeft((true.B, 0.U.asTypeOf(new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))) { case ((h, prev), pmp) =>
       (h && pmp.homogeneous(addr, pgLevel, prev), pmp)
     }._1
   }
 }
 
-class PMPChecker(lgMaxSize: Int)(implicit val p: Parameters) extends Module
-    with HasCoreParameters {
+class PMPChecker(lgMaxSize: Int, paddrBits: Int, pmpGranularity: Int, nPMPs: Int, pgIdxBits: Int, pgLevels: Int, pgLevelBits: Int) extends Module {
   val io = IO(new Bundle {
     val prv = Input(UInt(PRV.SZ.W))
-    val pmp = Input(Vec(nPMPs, new PMP))
+    val pmp = Input(Vec(nPMPs, new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
     val addr = Input(UInt(paddrBits.W))
     val size = Input(UInt(log2Ceil(lgMaxSize + 1).W))
     val r = Output(Bool())
@@ -153,7 +150,7 @@ class PMPChecker(lgMaxSize: Int)(implicit val p: Parameters) extends Module
   })
 
   val default = if (io.pmp.isEmpty) true.B else io.prv > PRV.S.U
-  val pmp0 = WireInit(0.U.asTypeOf(new PMP))
+  val pmp0 = WireInit(0.U.asTypeOf(new PMP(paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits)))
   pmp0.cfg.r := default
   pmp0.cfg.w := default
   pmp0.cfg.x := default
@@ -164,17 +161,17 @@ class PMPChecker(lgMaxSize: Int)(implicit val p: Parameters) extends Module
     val aligned = pmp.aligned(io.addr, io.size, lgMaxSize, prevPMP)
 
     for ((name, idx) <- Seq("no", "TOR", if (pmpGranularity <= 4) "NA4" else "", "NAPOT").zipWithIndex; if name.nonEmpty)
-      property.cover(pmp.cfg.a === idx.U, s"The cfg access is set to ${name} access ", "Cover PMP access mode setting")
+      cover(pmp.cfg.a === idx.U, s"The cfg access is set to ${name} access, Cover PMP access mode setting")
 
-    property.cover(pmp.cfg.l === 0x1.U, s"The cfg lock is set to high ", "Cover PMP lock mode setting")
+    cover(pmp.cfg.l === 0x1.U, s"The cfg lock is set to high, Cover PMP lock mode setting")
    
     // Not including Write and no Read permission as the combination is reserved
     for ((name, idx) <- Seq("no", "RO", "", "RW", "X", "RX", "", "RWX").zipWithIndex; if name.nonEmpty)
-      property.cover((Cat(pmp.cfg.x, pmp.cfg.w, pmp.cfg.r) === idx.U), s"The permission is set to ${name} access ", "Cover PMP access permission setting")
+      cover((Cat(pmp.cfg.x, pmp.cfg.w, pmp.cfg.r) === idx.U), s"The permission is set to ${name} access, Cover PMP access permission setting")
 
     for ((name, idx) <- Seq("", "TOR", if (pmpGranularity <= 4) "NA4" else "", "NAPOT").zipWithIndex; if name.nonEmpty) {
-      property.cover(!ignore && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode ", "Cover PMP access")
-      property.cover(pmp.cfg.l && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode with lock bit high", "Cover PMP access with lock bit")
+      cover(!ignore && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode, Cover PMP access")
+      cover(pmp.cfg.l && hit && aligned && pmp.cfg.a === idx.U, s"The access matches ${name} mode with lock bit high, Cover PMP access with lock bit")
     }
 
     val cur = WireInit(pmp)
