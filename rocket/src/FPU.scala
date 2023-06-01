@@ -49,7 +49,7 @@ trait HasFPUCtrlSigs {
 
 class FPUCtrlSigs extends Bundle with HasFPUCtrlSigs
 
-class FPUDecoder(p: FPUParameter) extends FPUModule(p) with ScalarOpConstants {
+class FPUDecoder(p: FPUParameter) extends FPUModule(p) {
   val io = IO(new Bundle {
     val inst = Input(Bits(32.W))
     val sigs = Output(new FPUCtrlSigs())
@@ -439,7 +439,7 @@ abstract class FPUModule(p: FPUParameter) extends Module {
   }
 }
 
-class FPToInt(p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
+class FPToInt(p: FPUParameter) extends FPUModule(p) {
   class Output extends Bundle {
     val in = new FPInput(p.fLen)
     val lt = Bool()
@@ -451,6 +451,12 @@ class FPToInt(p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
     val in = Flipped(Valid(new FPInput(p.fLen)))
     val out = Valid(new Output)
   })
+
+  def sext(from: Bits, width: Int): SInt = {
+    val signed = Wire(SInt(width.W))
+    signed := from.asSInt
+    signed
+  }
 
   val in = RegEnable(io.in.bits, io.in.valid)
   val valid = RegNext(io.in.valid)
@@ -513,7 +519,7 @@ class FPToInt(p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
   io.out.bits.in := in
 }
 
-class IntToFP(val latency: Int, p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
+class IntToFP(val latency: Int, p: FPUParameter) extends FPUModule(p) {
   val io = IO(new Bundle {
     val in = Flipped(Valid(new IntToFPInput(p.xLen)))
     val out = Valid(new FPResult(p.fLen))
@@ -559,7 +565,7 @@ class IntToFP(val latency: Int, p: FPUParameter) extends FPUModule(p) with Shoul
   io.out <> Pipe(in.valid, mux, latency-1)
 }
 
-class FPToFP(val latency: Int, p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
+class FPToFP(val latency: Int, p: FPUParameter) extends FPUModule(p) {
   val io = IO(new Bundle {
     val in = Flipped(Valid(new FPInput(p.fLen)))
     val out = Valid(new FPResult(p.fLen))
@@ -682,7 +688,7 @@ class MulAddRecFNPipe(latency: Int, expWidth: Int, sigWidth: Int) extends Module
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 
-class FPUFMAPipe(val latency: Int, val t: FType, p: FPUParameter) extends FPUModule(p) with ShouldBeRetimed {
+class FPUFMAPipe(val latency: Int, val t: FType, p: FPUParameter) extends FPUModule(p) {
   require(latency > 0)
 
   val io = IO(new Bundle {
