@@ -327,6 +327,7 @@ class TLB(
   asIdBits: Int,
   xLen: Int,
   cacheBlockBytes: Int,
+  debugModuleAddress: Some(AddressSet),
   memoryCacheable: Boolean,
   memoryHomogenous: Boolean,
   usingHypervisor: Boolean,
@@ -343,7 +344,7 @@ class TLB(
     /** SFence Input */
     val sfence = Flipped(Valid((new SFenceReq(vaddrBits, asIdBits))))
     /** IO to PTW */
-    val ptw = new TLBPTWIO() // TODO: Dependent on PTW
+    val ptw = new TLBPTWIO()
     /** suppress a TLB refill, one cycle after a miss */
     val kill = Input(Bool())
   })
@@ -442,7 +443,7 @@ class TLB(
   def fastCheck(member: MemSlaveParameters => Boolean) = 
     legal_address && Memory.fastProperty(mpu_physaddr, member, (b:Boolean) => b.B, memSlaves)
   // In M mode, if access DM address(debug module program buffer)
-  val deny_access_to_debug = mpu_priv <= PRV.M.U && p(DebugModuleKey).map(dmp => dmp.address.contains(mpu_physaddr)).getOrElse(false.B) // TODO: Refactor `p`
+  val deny_access_to_debug = mpu_priv <= PRV.M.U && debugModuleAddress.map(_.contains(mpu_physaddr)).getOrElse(false.B)
   val prot_r = fastCheck(_.supportsGet) && !deny_access_to_debug && pmp.io.r
   val prot_w = fastCheck(_.supportsPutFull) && !deny_access_to_debug && pmp.io.w
   val prot_pp = fastCheck(_.supportsPutPartial)
@@ -565,7 +566,7 @@ class TLB(
   // vaddr misaligned: vaddr[1:0]=b00
   val misaligned = (io.req.bits.vaddr & (UIntToOH(io.req.bits.size) - 1.U)).orR
   def badVA(guestPA: Boolean): Bool = {
-    val additionalPgLevels = (if (guestPA) io.ptw.hgatp else satp).additionalPgLevels // TODO: Cannot resolve
+    val additionalPgLevels = (if (guestPA) io.ptw.hgatp else satp).additionalPgLevels
     val extraBits = if (guestPA) hypervisorExtraAddrBits else 0
     val signed = !guestPA
     val nPgLevelChoices = pgLevels - minPgLevels + 1
