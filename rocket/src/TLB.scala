@@ -327,7 +327,7 @@ class TLB(
   asIdBits: Int,
   xLen: Int,
   cacheBlockBytes: Int,
-  debugModuleAddress: Some(AddressSet),
+  debugModuleAddress: Option[AddressSet],
   memoryCacheable: Boolean,
   memoryHomogenous: Boolean,
   usingHypervisor: Boolean,
