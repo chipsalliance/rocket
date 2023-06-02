@@ -23,3 +23,6 @@
 [submodule "dependencies/tilelink"]
 	path = dependencies/tilelink
 	url = git@github.com:chipsalliance/tilelink.git
+[submodule "dependencies/riscv-opcodes"]
+	path = dependencies/riscv-opcodes
+	url = git@github.com:riscv/riscv-opcodes.git
