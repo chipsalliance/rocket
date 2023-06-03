@@ -192,17 +192,16 @@ class NMIDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class I32Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.SLLI->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SL,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SRLI->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SRAI->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SRA,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    SLLI->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SL,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    SRLI->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    SRAI->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_SRA,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class I64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     LD->        List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_ADD,   Y,M_XRD,      N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     LWU->       List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM, A1_RS1, IMM_I, DW_XPR,aluFn.FN_ADD,   Y,M_XRD,      N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -225,6 +224,7 @@ class I64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class Hypervisor64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     HLV_D->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_ZERO, A1_RS1, IMM_X, DW_XPR, aluFn.FN_ADD, Y,M_XRD,      N,N,N,N,N,N,Y,CSR.I,N,N,N,N),
     HSV_D->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO, A1_RS1, IMM_I, DW_XPR, aluFn.FN_ADD, Y,M_XWR,      N,N,N,N,N,N,N,CSR.I,N,N,N,N),
@@ -249,6 +249,7 @@ class MDecode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConst
 
 class M64Decode(pipelinedMul: Boolean, aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val M = if (pipelinedMul) Y else N
   val D = if (pipelinedMul) N else Y
   val table: Array[(BitPat, List[BitPat])] = Array(
@@ -279,6 +280,7 @@ class ADecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class A64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     AMOADD_D->  List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XA_ADD,   N,N,N,N,N,N,Y,CSR.N,N,N,Y,N),
     AMOSWAP_D-> List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_ZERO,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ADD,   Y,M_XA_SWAP,  N,N,N,N,N,N,Y,CSR.N,N,N,Y,N),
@@ -398,6 +400,7 @@ class HDDecode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class H64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_L_H->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     FCVT_LU_H-> List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -407,6 +410,7 @@ class H64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class F64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     FCVT_L_S->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     FCVT_LU_S-> List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -416,6 +420,7 @@ class F64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 
 class D64Decode(aluFn: ALUFN = ALUFN()) extends DecodeConstants
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     FMV_X_D->   List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,Y),
     FCVT_L_D->  List(Y,Y,N,N,N,N,N,N,N,N,N,N,A2_X,   A1_X,   IMM_X, DW_X,  aluFn.FN_X,     N,M_X,        Y,N,N,N,N,N,Y,CSR.N,N,N,N,Y),
@@ -446,6 +451,7 @@ class ZBADecode extends DecodeConstants with UsesABLUFN
 
 class ZBA64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     ADD_UW ->   List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_64,aluFn.FN_ADDUW   ,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     SLLI_UW ->  List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_64,aluFn.FN_SLLIUW  ,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -473,13 +479,14 @@ class ZBBRDecode extends DecodeConstants with UsesABLUFN
 
 class ZBBR32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.RORI ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    RORI ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class ZBBR64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     RORI ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     RORW ->     List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_32, aluFn.FN_ROR,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -498,6 +505,7 @@ class ZBBCDecode extends DecodeConstants with UsesABLUFN
 
 class ZBBC64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     CLZW ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_32,aluFn.FN_CLZ ,      N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     CTZW ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_32,aluFn.FN_CTZ ,      N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -524,15 +532,16 @@ class ZBBSEDecode extends DecodeConstants with UsesABLUFN
 
 class ZBBZE64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     ZEXT_H ->   List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ZEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class ZBBZE32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.ZEXT_H ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ZEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    ZEXT_H ->   List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_ZEXTH,    N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class ZBBORCBDecode extends DecodeConstants with UsesABLUFN
@@ -544,6 +553,7 @@ class ZBBORCBDecode extends DecodeConstants with UsesABLUFN
 // In both Zbb and Zbkb
 class ZBBREV864Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     REV8 ->     List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_REV8,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
@@ -551,9 +561,9 @@ class ZBBREV864Decode extends DecodeConstants with UsesABLUFN
 // In both Zbb and Zbkb
 class ZBBREV832Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.REV8->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_REV8,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    REV8->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X,A1_RS1, IMM_X, DW_XPR,aluFn.FN_REV8,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 // Only in Zbkb
@@ -567,17 +577,17 @@ class ZBKBDecode extends DecodeConstants with UsesABLUFN
 
 class ZBKB64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     PACKW ->    List(Y,N,N,N,N,N,Y,Y,N,N,N,N,A2_RS2,A1_RS1, IMM_X, DW_32, aluFn.FN_PACK,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class ZBKB32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.ZIP ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X  ,A1_RS1, IMM_X, DW_X, aluFn.FN_ZIP,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.UNZIP ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X  ,A1_RS1, IMM_X, DW_X, aluFn.FN_UNZIP,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    ZIP ->      List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X  ,A1_RS1, IMM_X, DW_X, aluFn.FN_ZIP,     N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    UNZIP ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_X  ,A1_RS1, IMM_X, DW_X, aluFn.FN_UNZIP,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 // also in Zbkc but Zbkc does not have CLMULR
@@ -612,19 +622,17 @@ class ZBSDecode extends DecodeConstants with UsesABLUFN
 
 class ZBS32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.BCLRI ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BCLR,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.BEXTI ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BEXT,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.BINVI ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BINV,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.BSETI ->
-                List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BSET,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    BCLRI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BCLR,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    BEXTI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BEXT,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    BINVI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BINV,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    BSETI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BSET,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 
 class ZBS64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     BCLRI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BCLR,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     BEXTI ->    List(Y,N,N,N,N,N,N,Y,N,N,N,N,A2_IMM,A1_RS1, IMM_I, DW_XPR,aluFn.FN_BEXT,   N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -634,14 +642,16 @@ class ZBS64Decode extends DecodeConstants with UsesABLUFN
 
 class ZKND32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.AES32DSI ->
+    AES32DSI ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DS, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.AES32DSMI->
+    AES32DSMI->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DSM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 class ZKND64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     AES64DS ->  List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DS, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     AES64DSM -> List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_DSM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
@@ -651,14 +661,14 @@ class ZKND64Decode extends DecodeConstants with UsesABLUFN
 }
 class ZKNE32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.AES32ESI ->
-                List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ES, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.AES32ESMI ->
-                List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ESM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
+    AES32ESI -> List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ES, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
+    AES32ESMI ->List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ESM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 class ZKNE64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     AES64ES ->  List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ES, N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     AES64ESM -> List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_XPR,aluFn.FN_AES_ESM,N,M_X,        N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
@@ -674,22 +684,24 @@ class ZKNHDecode extends DecodeConstants with UsesABLUFN
 }
 class ZKNH32Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions32._
   val table: Array[(BitPat, List[BitPat])] = Array(
-    Instructions32.SHA512SIG0L ->
+    SHA512SIG0L ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SHA512SIG1L ->
+    SHA512SIG1L ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SHA512SIG0H ->
+    SHA512SIG0H ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SHA512SIG1H ->
+    SHA512SIG1H ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SHA512SUM0R ->
+    SHA512SUM0R ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SUM0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
-    Instructions32.SHA512SUM1R ->
+    SHA512SUM1R ->
                 List(Y,N,N,N,N,N,Y,Y,N,N,Y,N,A2_RS2,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SUM1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N))
 }
 class ZKNH64Decode extends DecodeConstants with UsesABLUFN
 {
+  import Instructions64._
   val table: Array[(BitPat, List[BitPat])] = Array(
     SHA512SIG0->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG0,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
     SHA512SIG1->List(Y,N,N,N,N,N,N,Y,N,N,Y,N,A2_X  ,A1_RS1, IMM_X, DW_X,  aluFn.FN_SHA512_SIG1,N,M_X,    N,N,N,N,N,N,Y,CSR.N,N,N,N,N),
