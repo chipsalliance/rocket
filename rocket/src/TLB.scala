@@ -13,7 +13,7 @@ import org.chipsalliance.rockettile.{CoreModule, CoreBundle}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.devices.debug.DebugModuleKey
 import chisel3.internal.sourceinfo.SourceInfo
-import org.chipsalliance.rocket.constants.MemoryOpConstants
+import org.chipsalliance.rocket._
 import org.chipsalliance.rocket.util._
 
 /** =SFENCE=
@@ -314,6 +314,7 @@ class TLB(
   cfg: TLBConfig,
   memSlaves: Seq[MemSlaveParameters],
   pmpGranularity: Int,
+  nPMPs: Int,
   pgLevels: Int,
   minPgLevels: Int,
   pgLevelBits: Int,

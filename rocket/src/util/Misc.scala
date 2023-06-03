@@ -5,6 +5,7 @@ package org.chipsalliance.rocket.util
 
 import chisel3._
 import chisel3.util._
+import chisel3.util.random._
 
 object PopCountAtLeast {
   private def two(x: UInt): (Bool, Bool) = x.getWidth match {
@@ -21,4 +22,22 @@ object PopCountAtLeast {
     case 2 => two(x)._2
     case 3 => PopCount(x) >= n.U
   }
+}
+
+object Random
+{
+  def apply(mod: Int, random: UInt): UInt = {
+    if (isPow2(mod)) random.extract(log2Ceil(mod)-1,0)
+    else PriorityEncoder(partition(apply(1 << log2Up(mod*8), random), mod))
+  }
+  def apply(mod: Int): UInt = apply(mod, randomizer)
+  def oneHot(mod: Int, random: UInt): UInt = {
+    if (isPow2(mod)) UIntToOH(random(log2Up(mod)-1,0))
+    else PriorityEncoderOH(partition(apply(1 << log2Up(mod*8), random), mod)).asUInt
+  }
+  def oneHot(mod: Int): UInt = oneHot(mod, randomizer)
+
+  private def randomizer = LFSR(16)
+  private def partition(value: UInt, slices: Int) =
+    Seq.tabulate(slices)(i => value < UInt((((i + 1) << value.getWidth) / slices).W))
 }
