@@ -1,10 +1,8 @@
 // See LICENSE.SiFive for license details.
 
-package org.chipsalliance.rocket
+package org.chipsalliance.rocket.util
 
 import Chisel.log2Ceil
-
-import org.chipsalliance.rocket.util._
 
 object AddressDecoder
 {
