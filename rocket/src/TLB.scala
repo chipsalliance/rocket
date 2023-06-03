@@ -204,7 +204,7 @@ class TLBEntry(
   def insert(vpn: UInt, virtual: Bool, level: UInt, entry: TLBEntryData): Unit = {
     this.tag_vpn := vpn
     this.tag_v := virtual
-    this.level := level(log2Ceil(pgLevels - superpageOnly.B.litValue) - 1, 0)
+    this.level := level(log2Ceil(pgLevels - superpageOnly.B) - 1, 0)
 
     val idx = sectorIdx(vpn)
     valid(idx) := true.B
@@ -324,10 +324,12 @@ class TLB(
   vaddrBits: Int,
   vaddrBitsExtended: Int,
   paddrBits: Int,
+  maxPAddrBits: Int,
   hypervisorExtraAddrBits: Int,
   asIdBits: Int,
   xLen: Int,
   cacheBlockBytes: Int,
+  customCSRsParam: CustomCSRs,
   debugModuleAddress: Option[AddressSet],
   memoryCacheable: Boolean,
   memoryHomogenous: Boolean,
@@ -345,7 +347,10 @@ class TLB(
     /** SFence Input */
     val sfence = Flipped(Valid((new SFenceReq(vaddrBits, asIdBits))))
     /** IO to PTW */
-    val ptw = new TLBPTWIO()
+    val ptw = new TLBPTWIO(
+      xLen, vpnBits, pgLevels, minPgLevels, pgLevelBits, maxPAddrBits,
+      pgIdxBits, vaddrBits, paddrBits, pmpGranularity, nPMPs, customCSRsParam
+    )
     /** suppress a TLB refill, one cycle after a miss */
     val kill = Input(Bool())
   })
@@ -574,7 +579,7 @@ class TLB(
     val minVAddrBits = pgIdxBits + minPgLevels * pgLevelBits + extraBits
     VecInit(Seq.range(0, nPgLevelChoices).map {
       i =>
-        val mask = ((BigInt(1) << vaddrBitsExtended) - (BigInt(1) << (minVAddrBits + i * pgLevelBits - signed.B.litValue.toInt))).U
+        val mask = ((BigInt(1) << vaddrBitsExtended) - (BigInt(1) << (minVAddrBits + i * pgLevelBits - signed.B))).U
         val maskedVAddr = io.req.bits.vaddr & mask
         additionalPgLevels === i.U && !(maskedVAddr === 0.U || signed.B && maskedVAddr === mask)
     }).asUInt.orR
@@ -666,7 +671,7 @@ class TLB(
   io.resp.ma.inst := false.B // this is up to the pipeline to figure out
   io.resp.cacheable := (c_array & hits).orR
   io.resp.must_alloc := (must_alloc_array & hits).orR
-  io.resp.prefetchable := (prefetchable_array & hits).orR && edge.manager.managers.forall(m => !m.supportsAcquireB || m.supportsHint).B
+  io.resp.prefetchable := (prefetchable_array & hits).orR && memSlaves.forall(m => !m.supportsAcquireB || m.supportsHint).B
   io.resp.miss := do_refill || vsatp_mode_mismatch || tlb_miss || multipleHits
   io.resp.paddr := Cat(ppn, io.req.bits.vaddr(pgIdxBits-1, 0))
   io.resp.gpa_is_pte := vstage1_en && r_gpa_is_pte

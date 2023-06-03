@@ -35,22 +35,3 @@ object CustomInstructions {
   def CUSTOM3_RD_RS1     = BitPat("b?????????????????110?????1111011")
   def CUSTOM3_RD_RS1_RS2 = BitPat("b?????????????????111?????1111011")
 }
-
-object CustomCSRs {
-  val mnscratch = 0x350
-  val mnepc = 0x351
-  val mncause = 0x352
-  val mnstatus = 0x353
-  val all = {
-    val res = collection.mutable.ArrayBuffer[Int]()
-    res += mnscratch
-    res += mnepc
-    res += mncause
-    res += mnstatus
-    res.toArray
-  }
-  val all32 = {
-    val res = collection.mutable.ArrayBuffer(all:_*)
-    res.toArray
-  }
-}
