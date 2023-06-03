@@ -2,6 +2,8 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
+import scala.collection.immutable
+import scala.collection.mutable
 
 //todo: remove util
 package object util {
