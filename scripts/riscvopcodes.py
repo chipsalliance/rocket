@@ -5,13 +5,13 @@ from parse import *
 
 if __name__ == "__main__":
     tpe = sys.argv[1]
-    if tpe in ["rv64*", "rv32*", "rv*"]:
+    if tpe in ["rv64*", "rv32*", "rv_*"]:
         match tpe:
             case "rv64*":
                 obj_name = "Instructions64"
             case "rv32*":
                 obj_name = "Instructions32"
-            case "rv*":
+            case "rv_*":
                 obj_name = "Instructions"
         instrs = create_inst_dict([tpe], False)
         instrs_str = ("package org.chipsalliance.rocket\n"

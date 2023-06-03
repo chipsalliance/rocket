@@ -52,7 +52,7 @@ trait RiscvOpcodesModule extends Module {
   }
   def rvInstruction = T {
     val f = T.ctx.dest / "Instructions.scala"
-    os.proc("python", script().path, "rv*").call(stdout = f, env = Map("PYTHONPATH"->millSourcePath.toString))
+    os.proc("python", script().path, "rv_*").call(stdout = f, env = Map("PYTHONPATH"->millSourcePath.toString))
     PathRef(f)
   }
   def causes = T {
