@@ -41,3 +41,19 @@ object Random
   private def partition(value: UInt, slices: Int) =
     Seq.tabulate(slices)(i => value < UInt((((i + 1) << value.getWidth) / slices).W))
 }
+
+object Split
+{
+  def apply(x: UInt, n0: Int) = {
+    val w = x.getWidth
+    (x.extract(w-1,n0), x.extract(n0-1,0))
+  }
+  def apply(x: UInt, n1: Int, n0: Int) = {
+    val w = x.getWidth
+    (x.extract(w-1,n1), x.extract(n1-1,n0), x.extract(n0-1,0))
+  }
+  def apply(x: UInt, n2: Int, n1: Int, n0: Int) = {
+    val w = x.getWidth
+    (x.extract(w-1,n2), x.extract(n2-1,n1), x.extract(n1-1,n0), x.extract(n0-1,0))
+  }
+}
