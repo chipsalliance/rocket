@@ -7,9 +7,6 @@ import chisel3.util.{HasBlackBoxResource, HasBlackBoxPath}
 
 import java.nio.file.{Files, Paths}
 
-case object ClockGateImpl extends Field[() => ClockGate](() => new EICG_wrapper)
-case object ClockGateModelFile extends Field[Option[String]](None)
-
 abstract class ClockGate extends BlackBox
   with HasBlackBoxResource with HasBlackBoxPath {
   val io = IO(new Bundle{
@@ -31,10 +28,11 @@ object ClockGate {
   def apply[T <: ClockGate](
       in: Clock,
       en: Bool,
+      modelFile: Option[String],
       name: Option[String] = None): Clock = {
-    val cg = Module(p(ClockGateImpl)())
+    val cg = Module(new EICG_wrapper)
     name.foreach(cg.suggestName(_))
-    p(ClockGateModelFile).map(cg.addVerilogResource(_))
+    modelFile.map(cg.addVerilogResource(_))
 
     cg.io.in := in
     cg.io.test_en := false.B

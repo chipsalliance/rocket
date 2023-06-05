@@ -260,10 +260,13 @@ class PTW(
   nL2TLBWays: Int,
   hypervisorExtraAddrBits: Int,
   maxHypervisorExtraAddrBits: Int,
+  maxSVAddrBits: Int,
+  cacheBlockBytes: Int,
   customCSRsParam: CustomCSRs,
+  memSlaves: Seq[MemSlaveParameters],
   clockGate: Boolean,
   usingVM: Boolean,
-  usingHypervisor:Boolean
+  usingHypervisor: Boolean
 ) extends Module {
   val io = IO(new Bundle {
     /** to n TLB */
@@ -484,7 +487,7 @@ class PTW(
       name = "l2_tlb_ram",
       desc = "L2 TLB",
       size = nL2TLBSets,
-      data = Vec(nL2TLBWays, UInt(code.width(new L2TLBEntry(nL2TLBSets).getWidth).W))
+      data = Vec(nL2TLBWays, UInt(code.width(new L2TLBEntry(nL2TLBSets, maxSVAddrBits, pgIdxBits, ppnBits, usingHypervisor).getWidth).W))
     )
 
     val g = Reg(Vec(nL2TLBWays, UInt(nL2TLBSets.W)))
@@ -500,7 +503,7 @@ class PTW(
     r_l2_plru_way := (if (nL2TLBWays > 1) l2_plru.way(r_idx) else 0.U)
     // refill with r_pte(leaf pte)
     when (l2_refill && !invalidated) {
-      val entry = Wire(new L2TLBEntry(nL2TLBSets))
+      val entry = Wire(new L2TLBEntry(nL2TLBSets, maxSVAddrBits, pgIdxBits, ppnBits, usingHypervisor))
       entry.ppn := r_pte.ppn
       entry.d := r_pte.d
       entry.a := r_pte.a
@@ -545,7 +548,7 @@ class PTW(
     val s2_error = (0 until nL2TLBWays).map(way => s2_valid_vec(way) && s2_rdata(way).error).orR
     when (s2_valid && s2_error) { valid.foreach { _ := 0.U }}
     // decode
-    val s2_entry_vec = s2_rdata.map(_.uncorrected.asTypeOf(new L2TLBEntry(nL2TLBSets)))
+    val s2_entry_vec = s2_rdata.map(_.uncorrected.asTypeOf(new L2TLBEntry(nL2TLBSets, maxSVAddrBits, pgIdxBits, ppnBits, usingHypervisor)))
     val s2_hit_vec = (0 until nL2TLBWays).map(way => s2_valid_vec(way) && (r_tag === s2_entry_vec(way).tag))
     val s2_hit = s2_valid && s2_hit_vec.orR
     io.dpath.perf.l2miss := s2_valid && !(s2_hit_vec.orR)
@@ -597,10 +600,10 @@ class PTW(
   val pmaPgLevelHomogeneous = (0 until pgLevels) map { i =>
     val pgSize = BigInt(1) << (pgIdxBits + ((pgLevels - 1 - i) * pgLevelBits))
     if (pageGranularityPMPs && i == pgLevels - 1) {
-      require(TLBPageLookup.homogeneous(edge.manager.managers, pgSize), s"All memory regions must be $pgSize-byte aligned")
+      require(TLBPageLookup.homogeneous(memSlaves, pgSize), s"All memory regions must be $pgSize-byte aligned")
       true.B
     } else {
-      TLBPageLookup(edge.manager.managers, xLen, p(CacheBlockBytes), pgSize)(r_pte.ppn << pgIdxBits).homogeneous
+      TLBPageLookup(memSlaves, xLen, cacheBlockBytes, pgSize)(r_pte.ppn << pgIdxBits).homogeneous
     }
   }
   val pmaHomogeneous = pmaPgLevelHomogeneous(count)
@@ -636,7 +639,7 @@ class PTW(
 
   // control state machine
   val next_state = WireDefault(state)
-  state := OptimizationBarrier(next_state)
+  state := next_state
   val do_switch = WireDefault(false.B)
 
   switch (state) {
@@ -818,7 +821,7 @@ class PTW(
   } // leaving gated-clock domain
 
   private def ccover(cond: Bool, label: String, desc: String)(implicit sourceInfo: SourceInfo) =
-    if (usingVM) property.cover(cond, s"PTW_$label", "MemorySystem;;" + desc)
+    if (usingVM) cover(cond, s"PTW_$label; MemorySystem;;" + desc)
 
   /** Relace PTE.ppn with ppn */
   private def makePTE(ppn: UInt, default: PTE) = {
@@ -834,22 +837,5 @@ class PTW(
     val pte = WireDefault(default)
     pte.ppn := Cat(hgatp.ppn >> maxHypervisorExtraAddrBits, lsbs)
     pte
-  }
-}
-
-/** Mix-ins for constructing tiles that might have a PTW */
-trait CanHavePTW extends HasTileParameters with HasHellaCache { this: BaseTile =>
-  val module: CanHavePTWModule
-  var nPTWPorts = 1
-  nDCachePorts += usingPTW.toInt
-}
-
-trait CanHavePTWModule extends HasHellaCacheModule {
-  val outer: CanHavePTW
-  val ptwPorts = ListBuffer(outer.dcache.module.io.ptw)
-  val ptw = Module(new PTW(outer.nPTWPorts)(outer.dcache.node.edges.out(0), outer.p))
-  ptw.io.mem <> DontCare
-  if (outer.usingPTW) {
-    dcachePorts += ptw.io.mem
   }
 }
