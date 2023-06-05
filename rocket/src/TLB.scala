@@ -198,7 +198,7 @@ class TLBEntry(
   def insert(vpn: UInt, virtual: Bool, level: UInt, entry: TLBEntryData): Unit = {
     this.tag_vpn := vpn
     this.tag_v := virtual
-    this.level := level(log2Ceil(pgLevels - superpageOnly.B) - 1, 0)
+    this.level := level(log2Ceil(pgLevels - superpageOnly.B.litValue.toInt) - 1, 0)
 
     val idx = sectorIdx(vpn)
     valid(idx) := true.B
@@ -573,7 +573,7 @@ class TLB(
     val minVAddrBits = pgIdxBits + minPgLevels * pgLevelBits + extraBits
     VecInit(Seq.range(0, nPgLevelChoices).map {
       i =>
-        val mask = ((BigInt(1) << vaddrBitsExtended) - (BigInt(1) << (minVAddrBits + i * pgLevelBits - signed.B))).U
+        val mask = ((BigInt(1) << vaddrBitsExtended) - (BigInt(1) << (minVAddrBits + i * pgLevelBits - signed.B.litValue.toInt))).U
         val maskedVAddr = io.req.bits.vaddr & mask
         additionalPgLevels === i.U && !(maskedVAddr === 0.U || signed.B && maskedVAddr === mask)
     }).asUInt.orR

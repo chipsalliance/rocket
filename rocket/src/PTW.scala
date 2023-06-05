@@ -8,6 +8,7 @@ import chisel3.util.{Arbiter, Cat, Decoupled, Enum, Mux1H, OHToUInt, PopCount, P
 import chisel3.withClock
 import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket.util._
+import org.chipsalliance.rocket.MemoryOpConstants._
 
 import scala.collection.mutable.ListBuffer
 
@@ -251,6 +252,7 @@ class PTW(
   maxPAddrBits: Int,
   pgIdxBits: Int,
   vaddrBits: Int,
+  vaddrBitsExtended: Int,
   paddrBits: Int,
   asIdBits: Int,
   pmpGranularity: Int,
@@ -262,11 +264,30 @@ class PTW(
   maxHypervisorExtraAddrBits: Int,
   maxSVAddrBits: Int,
   cacheBlockBytes: Int,
+  cacheDataBeats: Int,
+  cacheDataBits: Int,
+  coreDataBits: Int,
+  coreDataBytes: Int,
+  subWordBits: Int,
+  dcacheReqTagBits: Int,
+  dcacheArbPorts: Int,
+  untagBits: Int,
+  blockOffBits: Int,
+  rowBits: Int,
+  coreMaxAddrBits: Int,
+  lrscCycles: Int,
+  nWays: Int,
+  nMMIOs: Int,
+  dataScratchpadBytes: Int,
+  dataECCBytes: Int,
+  dataCode: Code,
   customCSRsParam: CustomCSRs,
   memSlaves: Seq[MemSlaveParameters],
   clockGate: Boolean,
   usingVM: Boolean,
-  usingHypervisor: Boolean
+  usingHypervisor: Boolean,
+  usingDataScratchpad: Boolean,
+  separateUncachedResp: Boolean
 ) extends Module {
   val io = IO(new Bundle {
     /** to n TLB */
@@ -278,7 +299,13 @@ class PTW(
       )
     ))
     /** to HellaCache */
-    val mem = new HellaCacheIO
+    val mem = new HellaCacheIO(
+      paddrBits, vaddrBitsExtended, separateUncachedResp,
+      xLen, coreDataBits, coreDataBytes, subWordBits, cacheBlockBytes, cacheDataBeats,
+      cacheDataBits, dcacheReqTagBits, dcacheArbPorts, untagBits, blockOffBits,
+      rowBits, coreMaxAddrBits, pgIdxBits, lrscCycles, nWays, nMMIOs, dataScratchpadBytes,
+      dataECCBytes, dataCode, usingDataScratchpad, usingVM
+    )
     /** to Core
       *
       * contains CSRs info and performance statistics
@@ -362,7 +389,7 @@ class PTW(
   }
   // construct pte from mem.resp
   val (pte, invalid_paddr) = {
-    val tmp = mem_resp_data.asTypeOf(new PTE())
+    val tmp = mem_resp_data.asTypeOf(new PTE)
     val res = WireDefault(tmp)
     res.ppn := Mux(do_both_stages && !stage2, tmp.ppn(vpnBits.min(tmp.ppn.getWidth)-1, 0), tmp.ppn(ppnBits-1, 0))
     when (tmp.r || tmp.w || tmp.x) {
