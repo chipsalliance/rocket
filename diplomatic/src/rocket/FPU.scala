@@ -11,6 +11,7 @@ import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.cde.config.Parameters
 import org.chipsalliance.rocket._
 import org.chipsalliance.rocket.Instructions._
+import org.chipsalliance.rocket.Instructions64._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
 
