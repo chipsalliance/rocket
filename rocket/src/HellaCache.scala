@@ -84,7 +84,7 @@ class HellaCacheWriteData(coreDataBits: Int, coreDataBytes: Int) extends Bundle 
   val mask = UInt(coreDataBytes.W)
 }
 
-class HellaCacheResp(coreDataBits: Int, coreDataBytes: Int) extends Bundle {
+class HellaCacheResp(coreDataBits: Int, coreDataBytes: Int, dcacheReqTagBits: Int, dcacheArbPorts: Int) extends Bundle {
   val replay = Bool()
   val has_data = Bool()
   val data_word_bypass = UInt(coreDataBits.W)
@@ -92,6 +92,8 @@ class HellaCacheResp(coreDataBits: Int, coreDataBytes: Int) extends Bundle {
   val store_data = UInt(coreDataBits.W)
   val data = UInt(coreDataBits.W)
   val mask = UInt(coreDataBytes.W)
+  val tag  = UInt((dcacheReqTagBits + log2Ceil(dcacheArbPorts)).W)
+  val size = UInt(log2Ceil(coreDataBytes.log2 + 1).W)
 }
 
 class AlignmentExceptions extends Bundle {
@@ -161,12 +163,12 @@ class HellaCacheIO(
   val s2_uncached = Input(Bool()) // advisory signal that the access is MMIO
   val s2_paddr = Input(UInt(paddrBits.W)) // translated address
 
-  val resp = Flipped(Valid(new HellaCacheResp(coreDataBits, coreDataBytes)))
+  val resp = Flipped(Valid(new HellaCacheResp(coreDataBits, coreDataBytes, dcacheReqTagBits, dcacheArbPorts)))
   val replay_next = Input(Bool())
   val s2_xcpt = Input(new HellaCacheExceptions)
   val s2_gpa = Input(UInt(vaddrBitsExtended.W))
   val s2_gpa_is_pte = Input(Bool())
-  val uncached_resp = Option.when(separateUncachedResp)(Flipped(Decoupled(new HellaCacheResp(coreDataBits, coreDataBytes))))
+  val uncached_resp = Option.when(separateUncachedResp)(Flipped(Decoupled(new HellaCacheResp(coreDataBits, coreDataBytes, dcacheReqTagBits, dcacheArbPorts))))
   val ordered = Input(Bool())
   val perf = Input(new HellaCachePerfEvents())
 
