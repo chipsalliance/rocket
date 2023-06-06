@@ -6,6 +6,7 @@ import Chisel._
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.util._
 import org.chipsalliance.rocket._
+import org.chipsalliance.rockettile.CustomCSRs
 
 case object XLen extends Field[Int]
 case object MaxHartIdBits extends Field[Int]

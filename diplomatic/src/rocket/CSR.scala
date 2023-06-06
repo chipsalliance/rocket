@@ -13,7 +13,6 @@ import freechips.rocketchip.util.property
 
 import scala.collection.mutable.LinkedHashMap
 import Instructions._
-import Instructions64._
 import CustomInstructions._
 
 class MStatus extends Bundle {
