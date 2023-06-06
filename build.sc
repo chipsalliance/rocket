@@ -102,6 +102,11 @@ object mytilelink extends dependencies.tilelink.common.TileLinkModule {
   def chisel3PluginJar = T(mychisel3.plugin.jar())
 }
 
+object myriscvopcodes extends common.RiscvOpcodesModule {
+  override def millSourcePath = os.pwd /  "dependencies" / "riscv-opcodes"
+  def script = PathRef(os.pwd / "scripts" / "riscvopcodes.py")
+}
+
 object rocket extends common.RocketModule {
   m =>
   def scalaVersion = T(v.scala)
@@ -111,6 +116,8 @@ object rocket extends common.RocketModule {
   def chisel3PluginJar = T(Some(mychisel3.plugin.jar()))
 
   def tilelinkModule = Some(mytilelink)
+
+  def riscvopcodesModule = myriscvopcodes
 }
 
 object diplomatic extends common.DiplomaticModule {
