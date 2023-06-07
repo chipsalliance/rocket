@@ -10,8 +10,6 @@ import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket._
 import org.chipsalliance.rocket.Instructions._
 import org.chipsalliance.rocket.Instructions64._
-import freechips.rocketchip.util._
-import freechips.rocketchip.util.property
 
 case class FPUParameter(
   minFLen: Int = 32,
