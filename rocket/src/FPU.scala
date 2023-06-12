@@ -1,7 +1,7 @@
 // See LICENSE.Berkeley for license details.
 // See LICENSE.SiFive for license details.
 
-package org.chipsalliance.rockettile
+package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
@@ -10,6 +10,7 @@ import chisel3.internal.sourceinfo.SourceInfo
 import org.chipsalliance.rocket._
 import org.chipsalliance.rocket.Instructions._
 import org.chipsalliance.rocket.Instructions64._
+import org.chipsalliance.rocket.util._
 
 case class FPUParameter(
   minFLen: Int = 32,
@@ -470,12 +471,12 @@ class FPToInt(p: FPUParameter) extends FPUModule(p) {
   val toint = WireDefault(store)
   val intType = WireDefault(in.fmt(0))
   io.out.bits.store := store
-  io.out.bits.toint := VecInit((0 until nIntTypes).map(i => toint((minXLen << i) - 1, 0).sextTo(xLen)): Seq[UInt])(intType)
+  io.out.bits.toint := VecInit((0 until nIntTypes).map(i => toint((p.minXLen << i) - 1, 0).sextTo(p.xLen)): Seq[UInt])(intType)
   io.out.bits.exc := 0.U
 
   when (in.rm(0)) {
     val classify_out = VecInit(floatTypes.map(t => t.classify(maxType.unsafeConvert(in.in1, t))): Seq[UInt])(tag)
-    toint := classify_out | (store >> minXLen << minXLen)
+    toint := classify_out | (store >> p.minXLen << p.minXLen)
     intType := false.B
   }
 
