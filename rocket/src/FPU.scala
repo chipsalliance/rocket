@@ -481,7 +481,7 @@ class FPToInt(p: FPUParameter) extends FPUModule(p) {
   }
 
   when (in.wflags) { // feq/flt/fle, fcvt
-    toint := (~in.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR | (store >> minXLen << minXLen)
+    toint := (~in.rm & Cat(dcmp.io.lt, dcmp.io.eq)).orR | (store >> p.minXLen << p.minXLen)
     io.out.bits.exc := dcmp.io.exceptionFlags
     intType := false.B
 
