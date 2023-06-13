@@ -480,7 +480,7 @@ class FPToInt(xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add
     intType := false.B
 
     when (!in.ren2) { // fcvt
-      val cvtType = in.typ(log2Ceil(nIntTypes), 1)
+      val cvtType = in.typ.extract(log2Ceil(nIntTypes), 1)
       intType := cvtType
       val conv = Module(new hardfloat.RecFNToIN(maxExpWidth, maxSigWidth, xLen))
       conv.io.in := in.in1
@@ -529,7 +529,7 @@ class IntToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen,
     val res = WireDefault(in.bits.in1.asSInt)
     for (i <- 0 until nIntTypes-1) {
       val smallInt = in.bits.in1((p.minXLen << i) - 1, 0)
-      when (in.bits.typ(log2Ceil(nIntTypes), 1) === i.U) {
+      when (in.bits.typ.extract(log2Ceil(nIntTypes), 1) === i.U) {
         res := Mux(in.bits.typ(0), smallInt.zext, smallInt.asSInt)
       }
     }
