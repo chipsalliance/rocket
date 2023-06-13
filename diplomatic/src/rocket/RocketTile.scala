@@ -187,5 +187,5 @@ class RocketTileModuleImp(outer: RocketTile) extends BaseTileModuleImp(outer)
 }
 
 trait HasFpuOpt { this: RocketTileModuleImp =>
-  val fpuOpt = outer.tileParams.core.fpu.map(params => Module(new FPU(hartId, xLen, params, false, enableCommitLog)))
+  val fpuOpt = outer.tileParams.core.fpu.map(params => Module(new FPU(hartId, xLen, params, outer.rocketParams.core.clockGate, enableCommitLog)))
 }
