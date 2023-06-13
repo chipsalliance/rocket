@@ -232,7 +232,7 @@ class FPInput(fLen: Int) extends Bundle with HasFPUCtrlSigs {
   val in3 = Bits((fLen+1).W)
 }
 
-case class FType(val exp: Int, val sig: Int) {
+case class FType(exp: Int, sig: Int) {
   def ieeeWidth = exp + sig
   def recodedWidth = ieeeWidth + 1
 
@@ -438,7 +438,7 @@ abstract class FPUModule(xLen: Int, p: FPUParams) extends Module {
   }
 }
 
-class FPToInt(xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
+class FPToInt(xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
   class Output extends Bundle {
     val in = new FPInput(p.fLen)
     val lt = Bool()
@@ -450,12 +450,6 @@ class FPToInt(xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
     val in = Flipped(Valid(new FPInput(p.fLen)))
     val out = Valid(new Output)
   })
-
-  def sext(from: Bits, width: Int): SInt = {
-    val signed = Wire(SInt(width.W))
-    signed := from.asSInt
-    signed
-  }
 
   val in = RegEnable(io.in.bits, io.in.valid)
   val valid = RegNext(io.in.valid)
@@ -518,7 +512,7 @@ class FPToInt(xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
   io.out.bits.in := in
 }
 
-class IntToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
+class IntToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
   val io = IO(new Bundle {
     val in = Flipped(Valid(new IntToFPInput(xLen)))
     val out = Valid(new FPResult(p.fLen))
@@ -564,7 +558,7 @@ class IntToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen,
   io.out <> Pipe(in.valid, mux, latency-1)
 }
 
-class FPToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
+class FPToFP(val latency: Int, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
   val io = IO(new Bundle {
     val in = Flipped(Valid(new FPInput(p.fLen)))
     val out = Valid(new FPResult(p.fLen))
@@ -687,7 +681,8 @@ class MulAddRecFNPipe(latency: Int, expWidth: Int, sigWidth: Int) extends Module
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 
-class FPUFMAPipe(val latency: Int, val t: FType, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) {
+class FPUFMAPipe(val t: FType, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
+  val latency = p.sfmaLatency
   require(latency > 0)
 
   val io = IO(new Bundle {
@@ -726,7 +721,7 @@ class FPUFMAPipe(val latency: Int, val t: FType, xLen: Int, p: FPUParams) extend
 class FPU(hartId: Int, xLen: Int, p: FPUParams, usingClockGating: Boolean, enableCommitLog: Boolean = false) extends FPUModule(xLen, p) {
   val io = IO(new FPUIO(hartId, xLen, p.fLen))
 
-  io.cp_resp.bits.exc := DontCare
+  io.cp_resp.bits.exc := 0.U
 
   val clock_en_reg = Reg(Bool())
   val clock_en = clock_en_reg || io.cp_req.valid
@@ -866,7 +861,7 @@ class FPU(hartId: Int, xLen: Int, p: FPUParams, usingClockGating: Boolean, enabl
     req
   }
 
-  val sfma = Module(new FPUFMAPipe(p.sfmaLatency, FType.S, xLen, p))
+  val sfma = Module(new FPUFMAPipe(FType.S, xLen, p))
   sfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === S
   sfma.io.in.bits := fuInput(Some(sfma.t))
 
@@ -904,13 +899,13 @@ class FPU(hartId: Int, xLen: Int, p: FPUParams, usingClockGating: Boolean, enabl
     Pipe(ifpu, ifpu.latency, (c: FPUCtrlSigs) => c.fromint, ifpu.io.out.bits),
     Pipe(sfma, sfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === S, sfma.io.out.bits)) ++
     Option.when(p.fLen > 32)({
-          val dfma = Module(new FPUFMAPipe(p.dfmaLatency, FType.D, xLen, p))
+          val dfma = Module(new FPUFMAPipe(FType.D, xLen, p))
           dfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === D
           dfma.io.in.bits := fuInput(Some(dfma.t))
           Pipe(dfma, dfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === D, dfma.io.out.bits)
         }) ++
     Option.when(p.minFLen == 16)({
-          val hfma = Module(new FPUFMAPipe(p.sfmaLatency, FType.H, xLen, p))
+          val hfma = Module(new FPUFMAPipe(FType.H, xLen, p))
           hfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === H
           hfma.io.in.bits := fuInput(Some(hfma.t))
           Pipe(hfma, hfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === H, hfma.io.out.bits)
