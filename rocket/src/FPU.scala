@@ -681,8 +681,7 @@ class MulAddRecFNPipe(latency: Int, expWidth: Int, sigWidth: Int) extends Module
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 
-class FPUFMAPipe(val t: FType, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
-  val latency = p.sfmaLatency
+class FPUFMAPipe(val latency: Int, val t: FType, xLen: Int, p: FPUParams) extends FPUModule(xLen, p) { // TODO: Add retimed annotation
   require(latency > 0)
 
   val io = IO(new Bundle {
@@ -861,7 +860,7 @@ class FPU(hartId: Int, xLen: Int, p: FPUParams, usingClockGating: Boolean, enabl
     req
   }
 
-  val sfma = Module(new FPUFMAPipe(FType.S, xLen, p))
+  val sfma = Module(new FPUFMAPipe(p.sfmaLatency, FType.S, xLen, p))
   sfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === S
   sfma.io.in.bits := fuInput(Some(sfma.t))
 
@@ -898,14 +897,14 @@ class FPU(hartId: Int, xLen: Int, p: FPUParams, usingClockGating: Boolean, enabl
     Pipe(fpmu, fpmu.latency, (c: FPUCtrlSigs) => c.fastpipe, fpmu.io.out.bits),
     Pipe(ifpu, ifpu.latency, (c: FPUCtrlSigs) => c.fromint, ifpu.io.out.bits),
     Pipe(sfma, sfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === S, sfma.io.out.bits)) ++
-    Option.when(p.fLen > 32)({
-          val dfma = Module(new FPUFMAPipe(FType.D, xLen, p))
+    (p.fLen > 32).option({
+          val dfma = Module(new FPUFMAPipe(p.dfmaLatency, FType.D, xLen, p))
           dfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === D
           dfma.io.in.bits := fuInput(Some(dfma.t))
           Pipe(dfma, dfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === D, dfma.io.out.bits)
         }) ++
-    Option.when(p.minFLen == 16)({
-          val hfma = Module(new FPUFMAPipe(FType.H, xLen, p))
+    (p.minFLen == 16).option({
+          val hfma = Module(new FPUFMAPipe(p.sfmaLatency, FType.H, xLen, p))
           hfma.io.in.valid := req_valid && ex_ctrl.fma && ex_ctrl.typeTagOut === H
           hfma.io.in.bits := fuInput(Some(hfma.t))
           Pipe(hfma, hfma.latency, (c: FPUCtrlSigs) => c.fma && c.typeTagOut === H, hfma.io.out.bits)
