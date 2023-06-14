@@ -430,6 +430,7 @@ void VBridgeImpl::record_rf_access(CommitPeekInterface cmInterface) {
   // for non-store ins. check rf write
   // todo: why exclude store insn? store insn shouldn't write regfile., try to remove it
   if ((!se->is_store) && (!se->is_mutiCycle)) {
+    LOG(INFO) << fmt::format("RF Check start");
     CHECK_EQ_S(wdata, se->rd_new_bits & emuConfig.get_mask(xlen))
       << fmt::format("\n RTL write Reg({})={:08X} but Spike write={:08X}", waddr, wdata, se->rd_new_bits);
   } else if (se->is_mutiCycle) {

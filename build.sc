@@ -466,7 +466,7 @@ object tests extends Module() {
           val runEnv = Map(
             "COSIM_bin" -> c.path.toString,
             "COSIM_entrance_bin" -> entrancePath,
-            "COSIM_wave" -> (T.dest / "wave").toString,
+            "COSIM_wave" -> (T.dest / s"$name").toString,
             "COSIM_reset_vector" -> "80000000",
             "COSIM_timeout" -> "100000",
             "passaddress" -> pass_address,
