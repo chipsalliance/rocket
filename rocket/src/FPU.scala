@@ -7,7 +7,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.{DontCare, WireInit, withClock, withReset}
 import chisel3.internal.sourceinfo.SourceInfo
-import org.chipsalliance.rocket._
+import org.chipsalliance.rocket.ScalarOpConstants._
 import org.chipsalliance.rocket.Instructions._
 import org.chipsalliance.rocket.Instructions64._
 import org.chipsalliance.rocket.util._
