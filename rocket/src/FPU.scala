@@ -313,10 +313,10 @@ abstract class FPUModule(xLen: Int, p: FPUParams) extends Module {
   def typeTagWbOffset = (FType.all.indexOf(minType) + 1).U
   def typeTagGroup(t: FType) = (if (floatTypes.contains(t)) typeTag(t) else typeTag(maxType)).U
   // typeTag
-  def H = BitPat(typeTagGroup(FType.H))
-  def S = BitPat(typeTagGroup(FType.S))
-  def D = BitPat(typeTagGroup(FType.D))
-  def I = BitPat(typeTag(maxType).U)
+  def H = typeTagGroup(FType.H)
+  def S = typeTagGroup(FType.S)
+  def D = typeTagGroup(FType.D)
+  def I = typeTag(maxType).U
 
   private def isBox(x: UInt, t: FType): Bool = x(t.sig + t.exp, t.sig + t.exp - 4).andR
 
