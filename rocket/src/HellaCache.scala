@@ -5,19 +5,22 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.{isPow2,log2Ceil,log2Up,Decoupled,Valid}
-import chisel3.dontTouch
-import scala.collection.mutable.ListBuffer
 import org.chipsalliance.rocket.util._
 import org.chipsalliance.rocket.MemoryOpConstants._
 
 case class DCacheParams(
   xLen: Int,
+  paddrBits: Int,
+  vaddrBitsExtended: Int,
   coreDataBits: Int,
+  coreMaxAddrBits: Int,
   cacheBlockBytes: Int,
   pgIdxBits: Int,
   addressBits: Int,
   dataBits: Int,
   lrscCycles: Int, // ISA requires 16-insn LRSC sequences to succeed
+  dcacheReqTagBits: Int,
+  dcacheArbPorts: Int,
   usingVM: Boolean,
   nSets: Int = 64,
   nWays: Int = 4,
@@ -41,6 +44,8 @@ case class DCacheParams(
   pipelineWayMux: Boolean = false,
   clockGate: Boolean = false,
   scratch: Option[BigInt] = None) {
+
+  def coreDataBytes: Int = coreDataBits / 8
 
   def tagCode: Code = Code.fromString(tagECC)
   def dataCode: Code = Code.fromString(dataECC)
@@ -106,59 +111,36 @@ case class DCacheParams(
   require(xLen <= cacheDataBits, s"xLen($xLen) > cacheDataBits($cacheDataBits)")
 }
 
-class HellaCacheReq(
-  xLen: Int,
-  coreDataBits: Int,
-  coreDataBytes: Int,
-  val subWordBits: Int,
-  cacheBlockBytes: Int,
-  cacheDataBeats: Int,
-  cacheDataBits: Int,
-  dcacheReqTagBits: Int,
-  dcacheArbPorts: Int,
-  untagBits: Int,
-  blockOffBits: Int,
-  rowBits: Int,
-  coreMaxAddrBits: Int,
-  pgIdxBits: Int,
-  val lrscCycles: Int, // ISA requires 16-insn LRSC sequences to succeed
-  nWays: Int,
-  nMMIOs: Int,
-  dataScratchpadBytes: Int,
-  dataECCBytes: Int,
-  dataCode: Code,
-  usingDataScratchpad: Boolean,
-  usingVM: Boolean
-) extends Bundle {
+class HellaCacheReq(params: DCacheParams) extends Bundle {
   val phys = Bool()
   val no_alloc = Bool()
   val no_xcpt = Bool()
 
-  val addr = UInt(coreMaxAddrBits.W)
-  val idx  = Option.when(usingVM && untagBits > pgIdxBits)(UInt(coreMaxAddrBits.W))
-  val tag  = UInt((dcacheReqTagBits + log2Ceil(dcacheArbPorts)).W)
+  val addr = UInt(params.coreMaxAddrBits.W)
+  val idx  = Option.when(params.usingVM && params.untagBits > params.pgIdxBits)(UInt(params.coreMaxAddrBits.W))
+  val tag  = UInt((params.dcacheReqTagBits + log2Ceil(params.dcacheArbPorts)).W)
   val cmd  = UInt(M_SZ.W)
-  val size = UInt(log2Ceil(coreDataBytes.log2 + 1).W)
+  val size = UInt(log2Ceil(params.coreDataBytes.log2 + 1).W)
   val signed = Bool()
   val dprv = UInt(PRV.SZ.W)
   val dv = Bool()
 }
 
-class HellaCacheWriteData(coreDataBits: Int, coreDataBytes: Int) extends Bundle {
-  val data = UInt(coreDataBits.W)
-  val mask = UInt(coreDataBytes.W)
+class HellaCacheWriteData(params: DCacheParams) extends Bundle {
+  val data = UInt(params.coreDataBits.W)
+  val mask = UInt(params.coreDataBytes.W)
 }
 
-class HellaCacheResp(coreDataBits: Int, coreDataBytes: Int, dcacheReqTagBits: Int, dcacheArbPorts: Int) extends Bundle {
+class HellaCacheResp(params: DCacheParams) extends Bundle {
   val replay = Bool()
   val has_data = Bool()
-  val data_word_bypass = UInt(coreDataBits.W)
-  val data_raw = UInt(coreDataBits.W)
-  val store_data = UInt(coreDataBits.W)
-  val data = UInt(coreDataBits.W)
-  val mask = UInt(coreDataBytes.W)
-  val tag  = UInt((dcacheReqTagBits + log2Ceil(dcacheArbPorts)).W)
-  val size = UInt(log2Ceil(coreDataBytes.log2 + 1).W)
+  val data_word_bypass = UInt(params.coreDataBits.W)
+  val data_raw = UInt(params.coreDataBits.W)
+  val store_data = UInt(params.coreDataBits.W)
+  val data = UInt(params.coreDataBits.W)
+  val mask = UInt(params.coreDataBytes.W)
+  val tag  = UInt((params.dcacheReqTagBits + log2Ceil(params.dcacheArbPorts)).W)
+  val size = UInt(log2Ceil(params.coreDataBytes.log2 + 1).W)
 }
 
 class AlignmentExceptions extends Bundle {
@@ -187,53 +169,22 @@ class HellaCachePerfEvents extends Bundle {
 }
 
 // interface between D$ and processor/DTLB
-class HellaCacheIO(
-  paddrBits: Int,
-  vaddrBitsExtended: Int,
-  separateUncachedResp: Boolean,
-  xLen: Int,
-  coreDataBits: Int,
-  coreDataBytes: Int,
-  subWordBits: Int,
-  cacheBlockBytes: Int,
-  cacheDataBeats: Int,
-  cacheDataBits: Int,
-  dcacheReqTagBits: Int,
-  dcacheArbPorts: Int,
-  untagBits: Int,
-  blockOffBits: Int,
-  rowBits: Int,
-  coreMaxAddrBits: Int,
-  pgIdxBits: Int,
-  lrscCycles: Int,
-  nWays: Int,
-  nMMIOs: Int,
-  dataScratchpadBytes: Int,
-  dataECCBytes: Int,
-  dataCode: Code,
-  usingDataScratchpad: Boolean,
-  usingVM: Boolean
-) extends Bundle {
-  val req = Decoupled(new HellaCacheReq(
-    xLen, coreDataBits, coreDataBytes, subWordBits, cacheBlockBytes, cacheDataBeats,
-    cacheDataBits, dcacheReqTagBits, dcacheArbPorts, untagBits, blockOffBits,
-    rowBits, coreMaxAddrBits, pgIdxBits, lrscCycles, nWays, nMMIOs, dataScratchpadBytes,
-    dataECCBytes, dataCode, usingDataScratchpad, usingVM
-  ))
+class HellaCacheIO(params: DCacheParams) extends Bundle {
+  val req = Decoupled(new HellaCacheReq(params))
   val s1_kill = Output(Bool()) // kill previous cycle's req
-  val s1_data = Output(new HellaCacheWriteData(coreDataBits, coreDataBytes)) // data for previous cycle's req
+  val s1_data = Output(new HellaCacheWriteData(params)) // data for previous cycle's req
   val s2_nack = Input(Bool()) // req from two cycles ago is rejected
   val s2_nack_cause_raw = Input(Bool()) // reason for nack is store-load RAW hazard (performance hint)
   val s2_kill = Output(Bool()) // kill req from two cycles ago
   val s2_uncached = Input(Bool()) // advisory signal that the access is MMIO
-  val s2_paddr = Input(UInt(paddrBits.W)) // translated address
+  val s2_paddr = Input(UInt(params.paddrBits.W)) // translated address
 
-  val resp = Flipped(Valid(new HellaCacheResp(coreDataBits, coreDataBytes, dcacheReqTagBits, dcacheArbPorts)))
+  val resp = Flipped(Valid(new HellaCacheResp(params)))
   val replay_next = Input(Bool())
   val s2_xcpt = Input(new HellaCacheExceptions)
-  val s2_gpa = Input(UInt(vaddrBitsExtended.W))
+  val s2_gpa = Input(UInt(params.vaddrBitsExtended.W))
   val s2_gpa_is_pte = Input(Bool())
-  val uncached_resp = Option.when(separateUncachedResp)(Flipped(Decoupled(new HellaCacheResp(coreDataBits, coreDataBytes, dcacheReqTagBits, dcacheArbPorts))))
+  val uncached_resp = Option.when(params.separateUncachedResp)(Flipped(Decoupled(new HellaCacheResp(params))))
   val ordered = Input(Bool())
   val perf = Input(new HellaCachePerfEvents())
 
