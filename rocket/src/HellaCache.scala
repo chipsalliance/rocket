@@ -10,32 +10,72 @@ import scala.collection.mutable.ListBuffer
 import org.chipsalliance.rocket.util._
 import org.chipsalliance.rocket.MemoryOpConstants._
 
-class HellaCacheReq(
+case class DCacheParams(
   xLen: Int,
   coreDataBits: Int,
-  coreDataBytes: Int,
-  val subWordBits: Int,
   cacheBlockBytes: Int,
-  cacheDataBeats: Int,
-  cacheDataBits: Int,
-  dcacheReqTagBits: Int,
-  dcacheArbPorts: Int,
-  untagBits: Int,
-  blockOffBits: Int,
-  rowBits: Int,
-  coreMaxAddrBits: Int,
   pgIdxBits: Int,
-  val lrscCycles: Int, // ISA requires 16-insn LRSC sequences to succeed
-  nWays: Int,
-  nMMIOs: Int,
-  dataScratchpadBytes: Int,
-  dataECCBytes: Int,
-  dataCode: Code,
-  usingDataScratchpad: Boolean,
-  usingVM: Boolean
-) extends Bundle {
+  addressBits: Int,
+  dataBits: Int,
+  lrscCycles: Int, // ISA requires 16-insn LRSC sequences to succeed
+  usingVM: Boolean,
+  nSets: Int = 64,
+  nWays: Int = 4,
+  rowBits: Int = 64,
+  subWordBitsOption: Option[Int] = None,
+  replacementPolicy: String = "random",
+  nTLBSets: Int = 1,
+  nTLBWays: Int = 32,
+  nTLBBasePageSectors: Int = 4,
+  nTLBSuperpages: Int = 4,
+  tagECC: Option[String] = None,
+  dataECC: Option[String] = None,
+  dataECCBytes: Int = 1,
+  nMSHRs: Int = 1,
+  nSDQ: Int = 17,
+  nRPQ: Int = 16,
+  nMMIOs: Int = 1,
+  blockBytes: Int = 64,
+  separateUncachedResp: Boolean = false,
+  acquireBeforeRelease: Boolean = false,
+  pipelineWayMux: Boolean = false,
+  clockGate: Boolean = false,
+  scratch: Option[BigInt] = None) {
+
+  def tagCode: Code = Code.fromString(tagECC)
+  def dataCode: Code = Code.fromString(dataECC)
+
+  def dataScratchpadBytes: Int = scratch.map(_ => nSets*blockBytes).getOrElse(0)
+
+  def replacement = new RandomReplacement(nWays)
+
+  def silentDrop: Boolean = !acquireBeforeRelease
+
+  require((!scratch.isDefined || nWays == 1),
+    "Scratchpad only allowed in direct-mapped cache.")
+  require((!scratch.isDefined || nMSHRs == 0),
+    "Scratchpad only allowed in blocking cache.")
+  if (scratch.isEmpty)
+    require(isPow2(nSets), s"nSets($nSets) must be pow2")
+
+  def blockOffBits = log2Up(cacheBlockBytes)
+  def idxBits = log2Up(nSets)
+  def untagBits = blockOffBits + idxBits
+  def pgUntagBits = if (usingVM) untagBits min pgIdxBits else untagBits
+  def tagBits = addressBits - pgUntagBits
+  def wayBits = log2Up(nWays)
+  def isDM = nWays == 1
+  def rowBytes = rowBits/8
+  def rowOffBits = log2Up(rowBytes)
+
+  def cacheDataBits = dataBits
+  def cacheDataBytes = cacheDataBits / 8
+  def cacheDataBeats = (cacheBlockBytes * 8) / cacheDataBits
+  def refillCycles = cacheDataBeats
+
   def wordBits = coreDataBits
-  def wordBytes = coreDataBytes
+  def wordBytes = coreDataBits / 8
+  def subWordBits = subWordBitsOption.getOrElse(wordBits)
   def subWordBytes = subWordBits / 8
   def wordOffBits = log2Up(wordBytes)
   def beatBytes = cacheBlockBytes / cacheDataBeats
@@ -60,11 +100,36 @@ class HellaCacheReq(
   def dataScratchpadSize = dataScratchpadBytes
 
   require(rowBits >= coreDataBits, s"rowBits($rowBits) < coreDataBits($coreDataBits)")
-  if (!usingDataScratchpad)
+  if (!scratch.isDefined)
     require(rowBits == cacheDataBits, s"rowBits($rowBits) != cacheDataBits($cacheDataBits)")
   // would need offset addr for puts if data width < xlen
   require(xLen <= cacheDataBits, s"xLen($xLen) > cacheDataBits($cacheDataBits)")
+}
 
+class HellaCacheReq(
+  xLen: Int,
+  coreDataBits: Int,
+  coreDataBytes: Int,
+  val subWordBits: Int,
+  cacheBlockBytes: Int,
+  cacheDataBeats: Int,
+  cacheDataBits: Int,
+  dcacheReqTagBits: Int,
+  dcacheArbPorts: Int,
+  untagBits: Int,
+  blockOffBits: Int,
+  rowBits: Int,
+  coreMaxAddrBits: Int,
+  pgIdxBits: Int,
+  val lrscCycles: Int, // ISA requires 16-insn LRSC sequences to succeed
+  nWays: Int,
+  nMMIOs: Int,
+  dataScratchpadBytes: Int,
+  dataECCBytes: Int,
+  dataCode: Code,
+  usingDataScratchpad: Boolean,
+  usingVM: Boolean
+) extends Bundle {
   val phys = Bool()
   val no_alloc = Bool()
   val no_xcpt = Bool()
