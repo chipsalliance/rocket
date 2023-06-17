@@ -118,6 +118,8 @@ object rocket extends common.RocketModule {
   def tilelinkModule = Some(mytilelink)
 
   def riscvopcodesModule = myriscvopcodes
+
+  def hardfloatModule = Some(myhardfloat)
 }
 
 object diplomatic extends common.DiplomaticModule {

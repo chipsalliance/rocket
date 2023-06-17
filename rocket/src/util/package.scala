@@ -189,6 +189,13 @@ package object util {
     def ##(y: Option[UInt]): Option[UInt] = x.map(_ ## y)
   }
 
+  implicit class BooleanToAugmentedBoolean(private val x: Boolean) extends AnyVal {
+    def toInt: Int = if (x) 1 else 0
+
+    // this one's snagged from scalaz
+    def option[T](z: => T): Option[T] = if (x) Some(z) else None
+  }
+
   implicit def uintToBitPat(x: UInt): BitPat = BitPat(x)
 
   def bitIndexes(x: BigInt, tail: Seq[Int] = Nil): Seq[Int] = {

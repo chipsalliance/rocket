@@ -10,6 +10,7 @@ trait RocketModule extends ScalaModule {
   def chisel3PluginJar: T[Option[PathRef]]
   def tilelinkModule: Option[ScalaModule]
   def riscvopcodesModule: RiscvOpcodesModule
+  def hardfloatModule: Option[ScalaModule]
   override def generatedSources: T[Seq[PathRef]] = T {
     Seq(
       riscvopcodesModule.rvInstruction(),
@@ -19,7 +20,7 @@ trait RocketModule extends ScalaModule {
       riscvopcodesModule.causes()
       )
   }
-  override def moduleDeps = Seq() ++ chisel3Module ++ tilelinkModule
+  override def moduleDeps = Seq() ++ chisel3Module ++ tilelinkModule ++ hardfloatModule
   override def scalacPluginClasspath = T(super.scalacPluginClasspath() ++ chisel3PluginJar())
   override def scalacOptions = T(super.scalacOptions() ++ chisel3PluginJar().map(p => s"-Xplugin:${p.path}"))
 }
