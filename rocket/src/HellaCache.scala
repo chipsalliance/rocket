@@ -191,3 +191,57 @@ class HellaCacheIO(params: DCacheParams) extends Bundle {
   val keep_clock_enabled = Output(Bool()) // should D$ avoid clock-gating itself?
   val clock_enabled = Input(Bool()) // is D$ currently being clocked?
 }
+
+/** Metadata array used for all HellaCaches */
+
+class L1Metadata(tagBits: Int) extends Bundle {
+  val coh = new ClientMetadata
+  val tag = UInt(tagBits.W)
+}
+
+object L1Metadata {
+  def apply(tagBits: Int, tag: Bits, coh: ClientMetadata) = {
+    val meta = Wire(new L1Metadata(tagBits))
+    meta.tag := tag
+    meta.coh := coh
+    meta
+  }
+}
+
+class L1MetaReadReq(idxBits: Int, nWays: Int, tagBits: Int) extends Bundle {
+  val idx    = UInt(idxBits.W)
+  val way_en = UInt(nWays.W)
+  val tag    = UInt(tagBits.W)
+}
+
+class L1MetaWriteReq(idxBits: Int, nWays: Int, tagBits: Int) extends L1MetaReadReq(idxBits, nWays, tagBits)  {
+  val data = new L1Metadata(tagBits)
+}
+
+class L1MetadataArray[T <: L1Metadata](onReset: () => T, idxBits: Int, tagBits: Int, nWays: Int, nSets: Int) extends Module {
+  val rstVal = onReset()
+  val io = IO(new Bundle {
+    val read = Flipped(Decoupled(new L1MetaReadReq(idxBits, nWays, tagBits)))
+    val write = Flipped(Decoupled(new L1MetaWriteReq(idxBits, nWays, tagBits)))
+    val resp = Output(Vec(nWays, rstVal.cloneType))
+  })
+
+  val rst_cnt = RegInit(0.U(log2Up(nSets+1).W))
+  val rst = rst_cnt < nSets.U
+  val waddr = Mux(rst, rst_cnt, io.write.bits.idx)
+  val wdata = Mux(rst, rstVal, io.write.bits.data).asUInt
+  val wmask = Mux(rst || (nWays == 1).B, (-1).S, io.write.bits.way_en.asSInt).asBools
+  val rmask = Mux(rst || (nWays == 1).B, (-1).S, io.read.bits.way_en.asSInt).asBools
+  when (rst) { rst_cnt := rst_cnt+1.U }
+
+  val metabits = rstVal.getWidth
+  val tag_array = SyncReadMem(nSets, Vec(nWays, UInt(metabits.W)))
+  val wen = rst || io.write.valid
+  when (wen) {
+    tag_array.write(waddr, VecInit.fill(nWays)(wdata), wmask)
+  }
+  io.resp := tag_array.read(io.read.bits.idx, io.read.fire()).map(_.asTypeOf(chiselTypeOf(rstVal)))
+
+  io.read.ready := !wen // so really this could be a 6T RAM
+  io.write.ready := !rst
+}

@@ -251,6 +251,8 @@ class PTW(
   pgLevelBits: Int,
   maxPAddrBits: Int,
   pgIdxBits: Int,
+  addressBits: Int,
+  dataBits: Int,
   vaddrBits: Int,
   vaddrBitsExtended: Int,
   paddrBits: Int,
@@ -299,13 +301,10 @@ class PTW(
       )
     ))
     /** to HellaCache */
-    val mem = new HellaCacheIO(
-      paddrBits, vaddrBitsExtended, separateUncachedResp,
-      xLen, coreDataBits, coreDataBytes, subWordBits, cacheBlockBytes, cacheDataBeats,
-      cacheDataBits, dcacheReqTagBits, dcacheArbPorts, untagBits, blockOffBits,
-      rowBits, coreMaxAddrBits, pgIdxBits, lrscCycles, nWays, nMMIOs, dataScratchpadBytes,
-      dataECCBytes, dataCode, usingDataScratchpad, usingVM
-    )
+    val mem = new HellaCacheIO(DCacheParams(
+      xLen, paddrBits, vaddrBitsExtended, coreDataBits, coreMaxAddrBits, cacheBlockBytes,
+      pgIdxBits, addressBits, dataBits, lrscCycles, dcacheReqTagBits, dcacheArbPorts, usingVM
+    ))
     /** to Core
       *
       * contains CSRs info and performance statistics
@@ -397,7 +396,7 @@ class PTW(
       for (i <- 0 until pgLevels-1)
         when (count <= i.U && tmp.ppn((pgLevels-1-i)*pgLevelBits-1, (pgLevels-2-i)*pgLevelBits) =/= 0.U) { res.v := false.B }
     }
-    (res, Mux(do_both_stages && !stage2, (tmp.ppn >> vpnBits) =/= 0.U, (tmp.ppn >> ppnBits) =/= 0.U))
+    (res, Mux(do_both_stages && !stage2, (tmp.ppn >> vpnBits).asUInt =/= 0.U, (tmp.ppn >> ppnBits).asUInt =/= 0.U))
   }
   // find non-leaf PTE, need traverse
   val traverse = pte.table() && !invalid_paddr && count < (pgLevels-1).U
@@ -409,7 +408,7 @@ class PTW(
     }
     val mask     = Mux(stage2 && count === r_hgatp_initial_count, ((1 << (hypervisorExtraAddrBits + pgLevelBits)) - 1).U, ((1 << pgLevelBits) - 1).U)
     val vpn_idx  = vpn_idxs(count) & mask
-    val raw_pte_addr = ((r_pte.ppn << pgLevelBits) | vpn_idx) << log2Ceil(xLen / 8)
+    val raw_pte_addr = ((r_pte.ppn << pgLevelBits).asUInt | vpn_idx) << log2Ceil(xLen / 8)
     val size = if (usingHypervisor) vaddrBits else paddrBits
     //use r_pte.ppn as page table base address
     //use vpn slice as offset
@@ -548,7 +547,7 @@ class PTW(
       for (way <- 0 until nL2TLBWays) {
         when (wmask(way)) {
           valid(way) := valid(way) | mask
-          g(way) := Mux(r_pte.g, g(way) | mask, g(way) & ~mask)
+          g(way) := Mux(r_pte.g, g(way) | mask, g(way) & (~mask).asUInt)
         }
       }
     }
@@ -557,7 +556,7 @@ class PTW(
       val hg = usingHypervisor.B && io.dpath.sfence.bits.hg
       for (way <- 0 until nL2TLBWays) {
         valid(way) :=
-          Mux(!hg && io.dpath.sfence.bits.rs1, valid(way) & ~UIntToOH(io.dpath.sfence.bits.addr(idxBits+pgIdxBits-1, pgIdxBits)),
+          Mux(!hg && io.dpath.sfence.bits.rs1, valid(way) & (~UIntToOH(io.dpath.sfence.bits.addr(idxBits+pgIdxBits-1, pgIdxBits))).asUInt,
           Mux(!hg && io.dpath.sfence.bits.rs2, valid(way) & g(way),
           0.U))
       }
@@ -630,11 +629,11 @@ class PTW(
       require(TLBPageLookup.homogeneous(memSlaves, pgSize), s"All memory regions must be $pgSize-byte aligned")
       true.B
     } else {
-      TLBPageLookup(memSlaves, xLen, cacheBlockBytes, pgSize)(r_pte.ppn << pgIdxBits).homogeneous
+      TLBPageLookup(memSlaves, xLen, cacheBlockBytes, pgSize)((r_pte.ppn << pgIdxBits).asUInt).homogeneous
     }
   }
   val pmaHomogeneous = pmaPgLevelHomogeneous(count)
-  val pmpHomogeneous = new PMPHomogeneityChecker(io.dpath.pmp, paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits).apply(r_pte.ppn << pgIdxBits, count)
+  val pmpHomogeneous = new PMPHomogeneityChecker(io.dpath.pmp, paddrBits, pmpGranularity, pgIdxBits, pgLevels, pgLevelBits).apply((r_pte.ppn << pgIdxBits).asUInt, count)
   val homogeneous = pmaHomogeneous && pmpHomogeneous
   // response to tlb
   for (i <- 0 until io.requestor.size) {
