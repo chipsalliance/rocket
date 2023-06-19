@@ -46,11 +46,13 @@ case class DCacheParams(
   scratch: Option[BigInt] = None) {
 
   def coreDataBytes: Int = coreDataBits / 8
+  def xBytes: Int = xLen / 8
 
   def tagCode: Code = Code.fromString(tagECC)
   def dataCode: Code = Code.fromString(dataECC)
 
   def dataScratchpadBytes: Int = scratch.map(_ => nSets*blockBytes).getOrElse(0)
+  def usingDataScratchpad: Boolean = scratch.nonEmpty
 
   def replacement = new RandomReplacement(nWays)
 
@@ -73,6 +75,7 @@ case class DCacheParams(
   def rowBytes = rowBits/8
   def rowOffBits = log2Up(rowBytes)
 
+  def lgCacheBlockBytes = log2Ceil(cacheBlockBytes)
   def cacheDataBits = dataBits
   def cacheDataBytes = cacheDataBits / 8
   def cacheDataBeats = (cacheBlockBytes * 8) / cacheDataBits
@@ -244,4 +247,40 @@ class L1MetadataArray[T <: L1Metadata](onReset: () => T, idxBits: Int, tagBits: 
 
   io.read.ready := !wen // so really this could be a 6T RAM
   io.write.ready := !rst
+}
+
+
+/** Base classes for Diplomatic TL2 HellaCaches */
+
+abstract class HellaCache(staticIdForMetadataUseOnly: Int) extends LazyModule
+  with HasNonDiplomaticTileParameters {
+  protected val cfg = tileParams.dcache.get
+
+  protected def cacheClientParameters = cfg.scratch.map(x => Seq()).getOrElse(Seq(TLMasterParameters.v1(
+    name          = s"Core ${staticIdForMetadataUseOnly} DCache",
+    sourceId      = IdRange(0, 1 max cfg.nMSHRs),
+    supportsProbe = TransferSizes(cfg.blockBytes, cfg.blockBytes))))
+
+  protected def mmioClientParameters = Seq(TLMasterParameters.v1(
+    name          = s"Core ${staticIdForMetadataUseOnly} DCache MMIO",
+    sourceId      = IdRange(firstMMIO, firstMMIO + cfg.nMMIOs),
+    requestFifo   = true))
+
+  def firstMMIO = (cacheClientParameters.map(_.sourceId.end) :+ 0).max
+
+  val node = TLClientNode(Seq(TLMasterPortParameters.v1(
+    clients = cacheClientParameters ++ mmioClientParameters,
+    minLatency = 1,
+    requestFields = tileParams.core.useVM.option(Seq()).getOrElse(Seq(AMBAProtField())))))
+
+  val hartIdSinkNodeOpt = cfg.scratch.map(_ => BundleBridgeSink[UInt]())
+  val mmioAddressPrefixSinkNodeOpt = cfg.scratch.map(_ => BundleBridgeSink[UInt]())
+
+  val module: HellaCacheModule
+
+  def flushOnFenceI = cfg.scratch.isEmpty && !node.edges.out(0).manager.managers.forall(m => !m.supportsAcquireB || !m.executable || m.regionType >= RegionType.TRACKED || m.regionType <= RegionType.IDEMPOTENT)
+
+  def canSupportCFlushLine = !usingVM || cfg.blockBytes * cfg.nSets <= (1 << pgIdxBits)
+
+  require(!tileParams.core.haveCFlush || cfg.scratch.isEmpty, "CFLUSH_D_L1 instruction requires a D$")
 }
