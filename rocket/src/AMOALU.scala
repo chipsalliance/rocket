@@ -5,7 +5,7 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import org.chipsalliance.cde.config.Parameters
+import org.chipsalliance.rocket.MemoryOpConstants._
 
 class StoreGen(typ: UInt, addr: UInt, dat: UInt, maxSize: Int) {
   val size = typ(log2Up(log2Up(maxSize)+1)-1,0)
@@ -49,7 +49,7 @@ class LoadGen(typ: UInt, signed: Bool, addr: UInt, dat: UInt, zero: Bool, maxSiz
   def data = genData(0)
 }
 
-class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
+class AMOALU(operandBits: Int) extends Module {
   val minXLen = 32
   val widths = (0 to log2Ceil(operandBits / minXLen)).map(minXLen << _)
 
