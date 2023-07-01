@@ -442,7 +442,7 @@ class Rocket(tile: RocketTile)(implicit p: Parameters) extends CoreModule()(p)
   }
 
   val ex_zbk_wdata = if (!usingBitManipCrypto && !usingBitManip) 0.U else {
-    val zbk = Module(new BitManipCrypto(xLen))
+    val zbk = Module(new BitManipCrypto(xLen, usingBitManipCrypto))
     zbk.io.fn  := ex_ctrl.alu_fn
     zbk.io.dw  := ex_ctrl.alu_dw
     zbk.io.rs1 := ex_op1.asUInt
