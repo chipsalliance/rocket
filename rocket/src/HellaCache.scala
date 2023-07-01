@@ -252,9 +252,7 @@ class L1MetadataArray[T <: L1Metadata](onReset: () => T, idxBits: Int, tagBits: 
 
 /** Base classes for Diplomatic TL2 HellaCaches */
 
-abstract class HellaCache(staticIdForMetadataUseOnly: Int, tileParams: TileParams) extends Module {
-  protected val cfg = tileParams.dcache.get
-
+abstract class HellaCache(staticIdForMetadataUseOnly: Int, protected val cfg: DCacheParams) extends Module {
   protected def cacheClientParameters = cfg.scratch.map(x => Seq()).getOrElse(Seq(TLMasterParameters.v1(
     name          = s"Core ${staticIdForMetadataUseOnly} DCache",
     sourceId      = IdRange(0, 1 max cfg.nMSHRs),

@@ -72,7 +72,7 @@ class DCacheMetadataReq(cacheParams: DCacheParams) {
   val data = UInt(cacheParams.tagCode.width(new L1Metadata(cacheParams.tagBits).getWidth).W)
 }
 
-class DCache(staticIdForMetadataUseOnly: Int, val crossing: ClockCrossingType, cacheParams: DCacheParams, haveCFlush: Boolean, usingAtomicsInCache: Boolean) extends HellaCache(staticIdForMetadataUseOnly) {
+class DCache(staticIdForMetadataUseOnly: Int, val crossing: ClockCrossingType, cacheParams: DCacheParams, haveCFlush: Boolean, usingAtomicsInCache: Boolean) extends HellaCache(staticIdForMetadataUseOnly, cacheParams) {
   override lazy val module = new DCacheModule(this, cacheParams, haveCFlush, usingAtomicsInCache)
 }
 
