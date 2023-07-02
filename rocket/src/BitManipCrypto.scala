@@ -4,7 +4,7 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import org.chipsalliance.cde.config.Parameters
+import org.chipsalliance.rocket.ABLUFN
 
 
 class BitManipCryptoInterface(xLen: Int) extends Bundle {
@@ -15,7 +15,7 @@ class BitManipCryptoInterface(xLen: Int) extends Bundle {
   val rd  = Output(UInt(xLen.W))
 }
 
-class BitManipCrypto(xLen: Int)(implicit val p: Parameters) extends Module with HasRocketCoreParameters {
+class BitManipCrypto(xLen: Int, usingBitManipCrypto: Boolean) extends Module {
   val fn = ABLUFN()
   val io = IO(new BitManipCryptoInterface(xLen))
 
