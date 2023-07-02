@@ -194,6 +194,35 @@ package object util {
 
     // this one's snagged from scalaz
     def option[T](z: => T): Option[T] = if (x) Some(z) else None
+
+    def OH1ToOH(x: UInt): UInt = (x << 1 | 1.U) & ~Cat(0.U(1.W), x)
+    def OH1ToUInt(x: UInt): UInt = OHToUInt(OH1ToOH(x))
+    def UIntToOH1(x: UInt, width: Int): UInt = ~((-1).S(width.W).asUInt << x)(width - 1, 0)
+    def UIntToOH1(x: UInt): UInt = UIntToOH1(x, (1 << x.getWidth) - 1)
+  }
+
+  // Fill 1s from low bits to high bits
+  def leftOR(x: UInt): UInt = leftOR(x, x.getWidth, x.getWidth)
+
+  def leftOR(x: UInt, width: Integer, cap: Integer = 999999): UInt = {
+    val stop = min(width, cap)
+
+    def helper(s: Int, x: UInt): UInt =
+      if (s >= stop) x else helper(s + s, x | (x << s)(width - 1, 0))
+
+    helper(1, x)(width - 1, 0)
+  }
+
+  // Fill 1s form high bits to low bits
+  def rightOR(x: UInt): UInt = rightOR(x, x.getWidth, x.getWidth)
+
+  def rightOR(x: UInt, width: Integer, cap: Integer = 999999): UInt = {
+    val stop = min(width, cap)
+
+    def helper(s: Int, x: UInt): UInt =
+      if (s >= stop) x else helper(s + s, x | (x >> s))
+
+    helper(1, x)(width - 1, 0)
   }
 
   implicit def uintToBitPat(x: UInt): BitPat = BitPat(x)
@@ -219,5 +248,69 @@ package object util {
       l += x
     }
     map.view.map({ case (k, vs) => k -> vs.toList }).toList
+  }
+
+  /** provides operators useful for working with bidirectional [[Bundle]]s
+   *
+   * In terms of [[Flipped]] with a producer 'p' and 'consumer' c:
+   * c :<= p // means drive all unflipped fields of 'c' from 'p' (e.g.: c.valid := p.valid)
+   * c :=> p // means drive all flipped fields of 'p' from 'c' (e.g.: `p.ready := c.ready`)
+   * c :<> p // do both of the above
+   * p :<> c // do both of the above, but you'll probably get a Flow error later.
+   *
+   * This utility class is needed because in [[chisel3]]:
+   * c := p // only works if there are no directions on fields.
+   * c <> p // only works if one of those is an [[IO]] (not a [[Wire]]).
+   *
+   * Compared with [[chisel3]] operators:
+   * c <> p   is an 'actual-direction'-inferred 'c :<> p' or 'p :<> c'
+   * c := p is equivalent to 'c :<= p' + 'p :=> c'. In other words, drive ALL fields of 'c' from 'p' regardless of their direction.
+   *
+   * Contrast this with 'c :<> p' which will connect a ready-valid producer
+   * 'p' to a consumer 'c'.
+   * If you flip this to 'p :<> c', it works the way you would expect (flipping the role of producer/consumer).
+   * This is how Chisel._ (compatability mode) and firrtl work.
+   * Some find that  ':<>' has superior readability (even if the direction can be inferred from an IO),
+   * because it clearly states the intended producer/consumer relationship.
+   * You will get an appropriate error if you connected it the wrong way
+   * (usually because you got the IO direction wrong) instead of silently succeeding.
+   *
+   * What if you want to connect all of the signals (e.g. ready/valid/bits)
+   * from producer 'p' to a monitor 'm'?
+   * For example in order to tap the connection to monitor traffic on an existing connection.
+   * In that case you can do 'm :<= p' and 'p :=> m'.
+   */
+  implicit class EnhancedChisel3Assign[T <: Data](private val x: T) extends AnyVal {
+    /** Assign all output fields of x from y; note that the actual direction of x is irrelevant */
+    def :<=(y: T): Unit = FixChisel3.assignL(x, y)
+
+    /** Assign all input fields of y from x; note that the actual direction of y is irrelevant */
+    def :=>(y: T): Unit = FixChisel3.assignR(x, y)
+
+    /** Bulk connect which will work between two [[Wire]]s (in addition to between [[IO]]s) */
+    def :<>(y: T): Unit = {
+      FixChisel3.assignL(x, y)
+      FixChisel3.assignR(x, y)
+    }
+
+
+    // Versions of the operators that use the type from the RHS
+    // y :<=: x  ->  x.:<=:(y)  ->  y :<= x  ->  FixChisel3.assignL(y, x)
+
+    /** version of the :<= operator that uses the type from the RHS */
+    def :<=:(y: T): Unit = {
+      FixChisel3.assignL(y, x)
+    }
+
+    /** version of the :=> operator that uses the type from the RHS */
+    def :>=:(y: T): Unit = {
+      FixChisel3.assignR(y, x)
+    }
+
+    /** version of the :<> operator that uses the type from the RHS */
+    def :<>:(y: T): Unit = {
+      FixChisel3.assignL(y, x)
+      FixChisel3.assignR(y, x)
+    }
   }
 }

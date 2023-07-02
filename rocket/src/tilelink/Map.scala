@@ -3,6 +3,7 @@
 package org.chipsalliance.rocket.tilelink
 
 import Chisel._
+import org.chipsalliance.rocket.util._
 
 // Moves the AddressSets of slave devices around
 // Combine with TLFilter to remove slaves or reduce their size

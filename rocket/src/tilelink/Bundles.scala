@@ -5,10 +5,11 @@ package org.chipsalliance.rocket.tilelink
 import chisel3._
 import chisel3.experimental.DataMirror
 import chisel3.util.{Decoupled, DecoupledIO}
+import org.chipsalliance.rocket.util._
 
 import scala.collection.immutable.ListMap
 
-abstract class TLBundleBase(params: TLBundleParameters) extends GenericParameterizedBundle(params)
+abstract class TLBundleBase(params: TLBundleParameters) extends Bundle
 
 // common combos in lazy policy:
 //   Put + Acquire

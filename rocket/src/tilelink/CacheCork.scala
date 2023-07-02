@@ -3,7 +3,8 @@
 package org.chipsalliance.rocket.tilelink
 
 import Chisel._
-import tilelink.TLMessages._
+import org.chipsalliance.rocket.tilelink.TLMessages._
+import org.chipsalliance.rocket.util._
 
 case class TLCacheCorkParams(
   unsafe: Boolean = false,

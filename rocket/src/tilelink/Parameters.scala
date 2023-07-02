@@ -1341,8 +1341,7 @@ object TLBundleParameters
 case class TLEdgeParameters(
   master: TLMasterPortParameters,
   slave:  TLSlavePortParameters,
-  params:  Parameters,
-  sourceInfo: SourceInfo) extends FormatEdge
+  sourceInfo: SourceInfo)
 {
   // legacy names:
   def manager = slave
@@ -1383,7 +1382,7 @@ object TLCreditedDelay {
 
 case class TLCreditedManagerPortParameters(delay: TLCreditedDelay, base: TLSlavePortParameters) {def infoString = base.infoString}
 case class TLCreditedClientPortParameters(delay: TLCreditedDelay, base: TLMasterPortParameters) {def infoString = base.infoString}
-case class TLCreditedEdgeParameters(client: TLCreditedClientPortParameters, manager: TLCreditedManagerPortParameters, params: Parameters, sourceInfo: SourceInfo) extends FormatEdge
+case class TLCreditedEdgeParameters(client: TLCreditedClientPortParameters, manager: TLCreditedManagerPortParameters, sourceInfo: SourceInfo) extends FormatEdge
 {
   val delay = client.delay + manager.delay
   val bundle = TLBundleParameters(client.base, manager.base)
@@ -1393,7 +1392,7 @@ case class TLCreditedEdgeParameters(client: TLCreditedClientPortParameters, mana
 case class TLAsyncManagerPortParameters(async: AsyncQueueParams, base: TLSlavePortParameters) {def infoString = base.infoString}
 case class TLAsyncClientPortParameters(base: TLMasterPortParameters) {def infoString = base.infoString}
 case class TLAsyncBundleParameters(async: AsyncQueueParams, base: TLBundleParameters)
-case class TLAsyncEdgeParameters(client: TLAsyncClientPortParameters, manager: TLAsyncManagerPortParameters, params: Parameters, sourceInfo: SourceInfo) extends FormatEdge
+case class TLAsyncEdgeParameters(client: TLAsyncClientPortParameters, manager: TLAsyncManagerPortParameters, sourceInfo: SourceInfo) extends FormatEdge
 {
   val bundle = TLAsyncBundleParameters(manager.async, TLBundleParameters(client.base, manager.base))
   def formatEdge = client.infoString + "\n" + manager.infoString
@@ -1402,7 +1401,7 @@ case class TLAsyncEdgeParameters(client: TLAsyncClientPortParameters, manager: T
 case class TLRationalManagerPortParameters(direction: RationalDirection, base: TLSlavePortParameters) {def infoString = base.infoString}
 case class TLRationalClientPortParameters(base: TLMasterPortParameters) {def infoString = base.infoString}
 
-case class TLRationalEdgeParameters(client: TLRationalClientPortParameters, manager: TLRationalManagerPortParameters, params: Parameters, sourceInfo: SourceInfo) extends FormatEdge
+case class TLRationalEdgeParameters(client: TLRationalClientPortParameters, manager: TLRationalManagerPortParameters, sourceInfo: SourceInfo) extends FormatEdge
 {
   val bundle = TLBundleParameters(client.base, manager.base)
   def formatEdge = client.infoString + "\n" + manager.infoString

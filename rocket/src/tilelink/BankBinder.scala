@@ -2,6 +2,8 @@
 
 package org.chipsalliance.rocket.tilelink
 
+import org.chipsalliance.rocket.util._
+
 case class BankBinderNode(mask: BigInt)(implicit valName: ValName) extends TLCustomNode
 {
   private val bit = mask & -mask

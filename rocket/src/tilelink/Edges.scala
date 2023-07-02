@@ -3,14 +3,14 @@
 package org.chipsalliance.rocket.tilelink
 
 import Chisel._
-import chisel3.internal.sourceinfo.SourceInfo
+import chisel3.experimental.SourceInfo
+import org.chipsalliance.rocket.util._
 
 class TLEdge(
   client:  TLClientPortParameters,
   manager: TLManagerPortParameters,
-  params:  Parameters,
   sourceInfo: SourceInfo)
-  extends TLEdgeParameters(client, manager, params, sourceInfo)
+  extends TLEdgeParameters(client, manager, sourceInfo)
 {
   def isAligned(address: UInt, lgSize: UInt): Bool = {
     if (maxLgSize == 0) Bool(true) else {
