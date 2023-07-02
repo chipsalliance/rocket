@@ -4,8 +4,10 @@
 package org.chipsalliance.rocket
 
 import chisel3._
-import chisel3.util.{Cat, log2Up, log2Ceil, log2Floor, Log2, Decoupled, Enum, Fill, Valid, Pipe}
-import freechips.rocketchip.util._
+import chisel3.util.{Cat, Decoupled, Enum, Fill, Log2, Pipe, Valid, log2Ceil, log2Floor, log2Up}
+import org.chipsalliance.rocket.{ALUFN, DecodeLogic}
+import org.chipsalliance.rocket.ScalarOpConstants._
+import org.chipsalliance.rocket.util._
 
 class MultiplierReq(dataBits: Int, tagBits: Int, aluFn: ALUFN = new ALUFN) extends Bundle {
   val fn = Bits(aluFn.SZ_ALU_FN.W)
@@ -179,7 +181,7 @@ class MulDiv(cfg: MulDivParams, width: Int, nXpr: Int = 32, aluFn: ALUFN = new A
   io.req.ready := state === s_ready
 }
 
-class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32, aluFn: ALUFN = new ALUFN) extends Module with ShouldBeRetimed {
+class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32, aluFn: ALUFN = new ALUFN) extends Module { // TODO: Add retimed annotation
   val io = IO(new Bundle {
     val req = Flipped(Valid(new MultiplierReq(width, log2Ceil(nXpr), aluFn)))
     val resp = Valid(new MultiplierResp(width, log2Ceil(nXpr)))
