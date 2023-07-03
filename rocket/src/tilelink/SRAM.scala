@@ -4,6 +4,7 @@ package org.chipsalliance.rocket.tilelink
 
 import chisel3._
 import chisel3.util._
+import org.chipsalliance.rocket.util._
 
 class TLRAMErrors(val params: ECCParams, val addrBits: Int) extends Bundle with CanHaveErrors {
   val correctable   = (params.code.canCorrect && params.notifyErrors).option(Valid(UInt(addrBits.W)))

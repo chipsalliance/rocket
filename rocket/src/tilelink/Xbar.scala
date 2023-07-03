@@ -5,25 +5,6 @@ package org.chipsalliance.rocket.tilelink
 import chisel3._
 import chisel3.util._
 
-// Trades off slave port proximity against routing resource cost
-//object ForceFanout
-//{
-//  def apply[T](
-//    a: TriStateValue = TriStateValue.unset,
-//    b: TriStateValue = TriStateValue.unset,
-//    c: TriStateValue = TriStateValue.unset,
-//    d: TriStateValue = TriStateValue.unset,
-//    e: TriStateValue = TriStateValue.unset)(body: Parameters => T) =
-//  {
-//    body(p.alterPartial {
-//      case ForceFanoutKey => p(ForceFanoutKey) match {
-//        case ForceFanoutParams(pa, pb, pc, pd, pe) =>
-//          ForceFanoutParams(a.update(pa), b.update(pb), c.update(pc), d.update(pd), e.update(pe))
-//      }
-//    })
-//  }
-//}
-
 private case class ForceFanoutParams(a: Boolean, b: Boolean, c: Boolean, d: Boolean, e: Boolean)
 
 class TLXbar(policy: TLArbiter.Policy = TLArbiter.roundRobin) extends Module

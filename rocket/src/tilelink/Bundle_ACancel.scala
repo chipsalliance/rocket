@@ -3,6 +3,7 @@
 package org.chipsalliance.rocket.tilelink
 
 import chisel3._
+import chisel3.util._
 import org.chipsalliance.rocket.util._
 
 import scala.collection.immutable.ListMap
