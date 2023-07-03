@@ -5,8 +5,7 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util.log2Ceil
-import freechips.rocketchip.util._
-import freechips.rocketchip.util.property
+import org.chipsalliance.rocket._
 
 class EventSet(val gate: (UInt, UInt) => Bool, val events: Seq[(String, () => Bool)]) {
   def size = events.size
@@ -21,7 +20,7 @@ class EventSet(val gate: (UInt, UInt) => Bool, val events: Seq[(String, () => Bo
   }
   def withCovers: Unit = {
     events.zipWithIndex.foreach {
-      case ((name, func), i) => property.cover(gate((1.U << i), (func() << i)), name)
+      case ((name, func), i) => cover(gate((1.U << i), (func() << i)), name)
     }
   }
 }
@@ -46,7 +45,7 @@ class EventSets(val eventSets: Seq[EventSet]) {
       require(e.hits.getWidth <= mask.getWidth, s"too many events ${e.hits.getWidth} wider than mask ${mask.getWidth}")
       e check mask
     }
-    sets(set)
+    sets(set.litValue.intValue)
   }
 
   def cover() = eventSets.foreach { _.withCovers }
@@ -67,7 +66,7 @@ class SuperscalarEventSets(val eventSets: Seq[(Seq[EventSet], (UInt, UInt) => UI
       }.reduce(reducer)
     }
     val zeroPadded = sets.padTo(1 << eventSetIdBits, 0.U)
-    zeroPadded(set)
+    zeroPadded(set.litValue.intValue)
   }
 
   def toScalarEventSets: EventSets = new EventSets(eventSets.map(_._1.head))
