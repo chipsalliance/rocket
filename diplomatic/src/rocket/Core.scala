@@ -54,7 +54,7 @@ trait CoreParams {
   val mtvecWritable: Boolean
   val traceHasWdata: Boolean
   def customIsaExt: Option[String] = None
-  def customCSRs(implicit p: Parameters): CustomCSRs = new CustomCSRs
+  def customCSRs(implicit p: Parameters): CustomCSRs = new CustomCSRs(p(XLen))
 
   def hasSupervisorMode: Boolean = useSupervisor || useVM
   def hasBitManipCrypto: Boolean = useBitManipCrypto || useCryptoNIST || useCryptoSM

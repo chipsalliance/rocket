@@ -305,7 +305,7 @@ class CSRFile(
     extends CoreModule()(p)
     with HasCoreParameters {
   val io = IO(new CSRFileIO {
-    val customCSRs = Output(Vec(CSRFile.this.customCSRs.size, new CustomCSRIO))
+    val customCSRs = Output(Vec(CSRFile.this.customCSRs.size, new CustomCSRIO(xLen)))
   })
 
   val reset_mstatus = WireDefault(0.U.asTypeOf(new MStatus()))
