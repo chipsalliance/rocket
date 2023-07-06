@@ -83,7 +83,7 @@ trait HasRocketCoreParameters extends HasCoreParameters {
   require(!rocketParams.haveFSDirty, "rocket doesn't support setting fs dirty from outside, please disable haveFSDirty")
 }
 
-class RocketCustomCSRs(implicit p: Parameters) extends CustomCSRs with HasRocketCoreParameters {
+class RocketCustomCSRs(implicit val p: Parameters) extends CustomCSRs(p(XLen)) with HasRocketCoreParameters {
   override def bpmCSR = {
     rocketParams.branchPredictionModeCSR.option(CustomCSR(bpmCSRId, BigInt(1), Some(BigInt(0))))
   }
