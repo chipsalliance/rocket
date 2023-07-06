@@ -4,7 +4,7 @@ package org.chipsalliance.rocket
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.util._
+import org.chipsalliance.rocket.util._
 
 class CryptoNISTInterface(xLen: Int) extends Bundle {
   val fn   = Input(UInt(ABLUFN().SZ_ZKN_FN.W))
