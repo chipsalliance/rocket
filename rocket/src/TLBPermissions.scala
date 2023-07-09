@@ -3,10 +3,9 @@
 package org.chipsalliance.rocket
 
 import chisel3._
-import chisel3.util.isPow2
+import chisel3.util._
 
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.tilelink._
+import org.chipsalliance.rocket.util._
 
 case class TLBPermissions(
   homogeneous: Bool, // if false, the below are undefined
@@ -30,16 +29,16 @@ object TLBPageLookup
     val useful = r || w || x || c || a || l
   }
 
-  private def groupRegions(managers: Seq[TLManagerParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = {
-    val permissions = managers.map { m =>
-      (m.address, TLBFixedPermissions(
-        e = Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains m.regionType,
-        r = m.supportsGet     || m.supportsAcquireB, // if cached, never uses Get
-        w = m.supportsPutFull || m.supportsAcquireT, // if cached, never uses Put
-        x = m.executable,
-        c = m.supportsAcquireB,
-        a = m.supportsArithmetic,
-        l = m.supportsLogical))
+  private def groupRegions(memSlaves: Seq[MemSlaveParameters]): Map[TLBFixedPermissions, Seq[AddressSet]] = { // TODO: Decoupled from Tilelink
+    val permissions = memSlaves.map { p =>
+      (p.address, TLBFixedPermissions(
+        e = Seq(RegionType.PUT_EFFECTS, RegionType.GET_EFFECTS) contains p.regionType,
+        r = p.supportsGet     || p.supportsAcquireB, // if cached, never uses Get
+        w = p.supportsPutFull || p.supportsAcquireT, // if cached, never uses Put
+        x = p.executable,
+        c = p.supportsAcquireB,
+        a = p.supportsArithmetic,
+        l = p.supportsLogical))
     }
 
     permissions
@@ -50,8 +49,9 @@ object TLBPageLookup
       .toMap
   }
 
+  // TODO
   // Unmapped memory is considered to be inhomogeneous
-  def apply(managers: Seq[TLManagerParameters], xLen: Int, cacheBlockBytes: Int, pageSize: BigInt): UInt => TLBPermissions = {
+  def apply(memSlaves: Seq[MemSlaveParameters], xLen: Int, cacheBlockBytes: Int, pageSize: BigInt): UInt => TLBPermissions = {
     require (isPow2(xLen) && xLen >= 8)
     require (isPow2(cacheBlockBytes) && cacheBlockBytes >= xLen/8)
     require (isPow2(pageSize) && pageSize >= cacheBlockBytes)
@@ -60,18 +60,18 @@ object TLBPageLookup
     val allSizes = TransferSizes(1, cacheBlockBytes)
     val amoSizes = TransferSizes(4, xLen/8)
 
-    val permissions = managers.foreach { m =>
-      require (!m.supportsGet        || m.supportsGet       .contains(allSizes),  s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsGet} Get, but must support ${allSizes}")
-      require (!m.supportsPutFull    || m.supportsPutFull   .contains(allSizes),  s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsPutFull} PutFull, but must support ${allSizes}")
-      require (!m.supportsPutPartial || m.supportsPutPartial.contains(allSizes),  s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsPutPartial} PutPartial, but must support ${allSizes}")
-      require (!m.supportsAcquireB   || m.supportsAcquireB  .contains(xferSizes), s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsAcquireB} AcquireB, but must support ${xferSizes}")
-      require (!m.supportsAcquireT   || m.supportsAcquireT  .contains(xferSizes), s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsAcquireT} AcquireT, but must support ${xferSizes}")
-      require (!m.supportsLogical    || m.supportsLogical   .contains(amoSizes),  s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsLogical} Logical, but must support ${amoSizes}")
-      require (!m.supportsArithmetic || m.supportsArithmetic.contains(amoSizes),  s"Memory region '${m.name}' at ${m.address} only supports ${m.supportsArithmetic} Arithmetic, but must support ${amoSizes}")
-      require (!(m.supportsAcquireB && m.supportsPutFull && !m.supportsAcquireT), s"Memory region '${m.name}' supports AcquireB (cached read) and PutFull (un-cached write) but not AcquireT (cached write)")
+    val permissions = memSlaves.foreach { p =>
+      require (!p.supportsGet        || p.supportsGet       .contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsGet} Get, but must support ${allSizes}")
+      require (!p.supportsPutFull    || p.supportsPutFull   .contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsPutFull} PutFull, but must support ${allSizes}")
+      require (!p.supportsPutPartial || p.supportsPutPartial.contains(allSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsPutPartial} PutPartial, but must support ${allSizes}")
+      require (!p.supportsAcquireB   || p.supportsAcquireB  .contains(xferSizes), s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsAcquireB} AcquireB, but must support ${xferSizes}")
+      require (!p.supportsAcquireT   || p.supportsAcquireT  .contains(xferSizes), s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsAcquireT} AcquireT, but must support ${xferSizes}")
+      require (!p.supportsLogical    || p.supportsLogical   .contains(amoSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsLogical} Logical, but must support ${amoSizes}")
+      require (!p.supportsArithmetic || p.supportsArithmetic.contains(amoSizes),  s"Memory region '${p.name}' at ${p.address} only supports ${p.supportsArithmetic} Arithmetic, but must support ${amoSizes}")
+      require (!(p.supportsAcquireB && p.supportsPutFull && !p.supportsAcquireT), s"Memory region '${p.name}' supports AcquireB (cached read) and PutFull (un-cached write) but not AcquireT (cached write)")
     }
 
-    val grouped = groupRegions(managers)
+    val grouped = groupRegions(memSlaves)
       .mapValues(_.filter(_.alignment >= pageSize)) // discard any region that's not big enough
 
     def lowCostProperty(prop: TLBFixedPermissions => Boolean): UInt => Bool = {
@@ -108,7 +108,7 @@ object TLBPageLookup
   }
 
   // Are all pageSize intervals of mapped regions homogeneous?
-  def homogeneous(managers: Seq[TLManagerParameters], pageSize: BigInt): Boolean = {
-    groupRegions(managers).values.forall(_.forall(_.alignment >= pageSize))
+  def homogeneous(memSlaves: Seq[MemSlaveParameters], pageSize: BigInt): Boolean = {
+    groupRegions(memSlaves).values.forall(_.forall(_.alignment >= pageSize))
   }
 }

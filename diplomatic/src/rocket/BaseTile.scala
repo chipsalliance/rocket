@@ -13,6 +13,7 @@ import freechips.rocketchip.interrupts._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.prci.{ClockSinkParameters}
+import freechips.rocketchip.rocket.{PgLevels, ASIdBits, VMIdBits, TracedInstruction, TraceAux}
 
 case object TileVisibilityNodeKey extends Field[TLEphemeralNode]
 case object TileKey extends Field[TileParams]

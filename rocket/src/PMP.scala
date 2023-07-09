@@ -55,7 +55,7 @@ class PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pg
     val base = Cat(addr, cfg.a(0)) | ((pmpGranularity - 1).U >> lgAlign)
     Cat(base & ~(base + 1.U), ((1 << lgAlign) - 1).U)
   }
-  private def comparand = ~(~(addr << lgAlign) | (pmpGranularity - 1).U)
+  private def comparand: UInt = ~(~(addr << lgAlign) | (pmpGranularity - 1).U)
 
   private def pow2Match(x: UInt, lgSize: UInt, lgMaxSize: Int) = {
     def eval(a: UInt, b: UInt, m: UInt) = ((a ^ b) & ~m) === 0.U
@@ -88,7 +88,7 @@ class PMP(paddrBits: Int, pmpGranularity: Int, pgIdxBits: Int, pgLevels: Int, pg
   private def upperBoundMatch(x: UInt, lgMaxSize: Int) =
     boundMatch(x, 0.U, lgMaxSize)
 
-  private def rangeMatch(x: UInt, lgSize: UInt, lgMaxSize: Int, prev: PMP) =
+  private def rangeMatch(x: UInt, lgSize: UInt, lgMaxSize: Int, prev: PMP): Bool =
     prev.lowerBoundMatch(x, lgSize, lgMaxSize) && upperBoundMatch(x, lgMaxSize)
 
   private def pow2Homogeneous(x: UInt, pgLevel: UInt) = {

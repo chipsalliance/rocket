@@ -11,6 +11,7 @@ import org.chipsalliance.rockettile._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
 import scala.collection.mutable.ArrayBuffer
+import org.chipsalliance.rockettile.CustomCSRs
 
 case class RocketCoreParams(
   bootFreqHz: BigInt = 0,
@@ -65,7 +66,7 @@ case class RocketCoreParams(
   val traceHasWdata: Boolean = false // ooo wb, so no wdata in trace
   override val customIsaExt = Some("Xrocket") // CEASE instruction
   override def minFLen: Int = fpu.map(_.minFLen).getOrElse(32)
-  override def customCSRs(implicit p: Parameters) = new RocketCustomCSRs
+  override def customCSRs(implicit p: Parameters) = new CustomCSRs
 }
 
 trait HasRocketCoreParameters extends HasCoreParameters {

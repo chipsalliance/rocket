@@ -5,6 +5,7 @@ package org.chipsalliance.rockettile
 import Chisel._
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.util._
+import freechips.rocketchip.rocket.{TracedInstruction}
 import org.chipsalliance.rocket._
 
 case object XLen extends Field[Int]
@@ -54,7 +55,7 @@ trait CoreParams {
   val mtvecWritable: Boolean
   val traceHasWdata: Boolean
   def customIsaExt: Option[String] = None
-  def customCSRs(implicit p: Parameters): CustomCSRs = new CustomCSRs
+  def customCSRs(implicit p: Parameters): CustomCSRs = new CustomCSRs(p(XLen))
 
   def hasSupervisorMode: Boolean = useSupervisor || useVM
   def hasBitManipCrypto: Boolean = useBitManipCrypto || useCryptoNIST || useCryptoSM
@@ -154,8 +155,15 @@ trait HasCoreIO extends HasTileParameters {
     val reset_vector = UInt(resetVectorLen.W).asInput
     val interrupts = new CoreInterrupts().asInput
     val imem  = new FrontendIO
-    val dmem = new HellaCacheIO
-    val ptw = new DatapathPTWIO().flip
+    val dmem = new HellaCacheIO(DCacheParams(
+      xLen, paddrBits, vaddrBitsExtended, coreDataBits, coreMaxAddrBits,
+      cacheBlockBytes, pgIdxBits, coreMaxAddrBits, coreDataBits,
+      coreParams.lrscCycles, coreParams.dcacheReqTagBits, dcacheArbPorts, usingVM
+    )) // TODO: `addressBits` and `dataBits` might not be correct
+    val ptw = new DatapathPTWIO(
+      xLen, pgLevels, pgLevelBits, minPgLevels, maxPAddrBits, pgIdxBits,
+      vaddrBits, paddrBits, asIdBits, pmpGranularity, nPMPs, coreParams.customCSRs
+    ).flip
     val fpu = new FPUCoreIO(hartIdLen, xLen, fLen).flip
     val rocc = new RoCCCoreIO().flip
     val trace = Vec(coreParams.retireWidth, new TracedInstruction).asOutput
