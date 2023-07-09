@@ -18,8 +18,8 @@ trait BusErrors extends Bundle {
   def toErrorList: List[Option[(Valid[UInt], String, String)]]
 }
 
-class L1BusErrors(implicit p: Parameters) extends CoreBundle()(p) with BusErrors {
-  val icache = new ICacheErrors
+class L1BusErrors(paddrBits :Int, cacheParams : ICacheParams)(implicit p: Parameters) extends CoreBundle()(p) with BusErrors {
+  val icache = new ICacheErrors(paddrBits, cacheParams)
   val dcache = new DCacheErrors
 
   def toErrorList = List(None,
